@@ -1,43 +1,132 @@
 // XF2 - Explained Flora-2
+// By Jason Morris for Singapore Management University Centre for Computational Law
 //
-// XF2 is a module for use in the Flora-2 (Ergo Lite) logic programming language.
-// It is designed to create a tree-structured explanation for how a grounded
-// query is proven in Flora-2.
-//
-// It uses a meta-programming approach based on a paper DETAILS.
-//
-// It is created as part of the Singapore Management University Centre for
-// Computational Law's research into domain specific programming languages
-// for legal purposes.
-//
-// The project is working on a programming langauge called L4. One of the
-// intended features of the langauge is that it could be used to automate
-// calculations with regard to legal rules, and automatically generate human-
-// readable explanations for how those calculations were performed.
-//
-// If L4 could be tranlated into a Flora-2 representation, this
-// tool could be used to automatically add explainability to that code.
-//
-// Usage:
-//
-// Import this module into your Flora-2 project, and then use the
-// explain() predicate with a reified ground query (a query without
-// variables, surrounded by ${}).
-//
-// eg:
-// explain(${mortal(Socrates)}).
-//
-// Goals:
-// 1. Be able to generate explanations for all of the logical structures
-//    in Flora-2 rules.
-// 2. Have those explanations be generated in a tree-structured way to
-//    allow the users 
-//
-// Limitations:
-// TO DO
+// TO DO:
+// * Currently working on getting a basic display of the decision tree working.
+//   Right now the display method on the explanation objects runs only once.
+//   There is documentation in the ErgoAI documentation google folder that shows
+//   how to make it run repeatedly.
+// * Need to get negations working. Not sure how to parse lists associated with them.
+// * Need to get conjunction and disjunction working. Having problems with the lists.
+
+:- compiler_options{expert=on}.
+
+// The following code sets out a tree structure for explanations to be built inside.
+
+xf2Explanation[|
+    goal=>\symbol,
+    subgoals=>xf2Explanation,
+    satisfied=>\boolean,
+    desc=>\string|].
+
+?x[display] :-
+  ?x:xf2Explanation,
+  ?x[display(0)].
+
+?x[display(?n)] :-
+  ?x:xf2Explanation[desc->?d,goal->?g],
+  tab(?n)@\prolog,
+  write(?d)@\io,
+  write('\n')@\io,
+  tab(?n)@\prolog,
+  write('Goal: ')@\io,
+  write(?g)@\io,
+  write('\n')@\io,
+  ?o \is ?n+1,
+  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[display(?o)]).
+
+xf2Bool::xf2Explanation.
+xf2Conjunction::xf2Explanation.
+xf2Disjunction::xf2Explanation.
+xf2Negation::xf2Explanation.
+xf2BaseFact::xf2Explanation.
+xf2Rule::xf2Explanation.
+
+// If the goal of an explanation is "\true", it is satisfied,
+// because true is always true.
+?x:xf2Bool[satisfied->\true,desc->'True is self-evident.'] :-
+  ?x:xf2Explanation[goal->\true].
+
+// If the goal of an explanation is "\false", it is not satisfied,
+// because false is always false.
+?x:xf2Bool[satisfied->\false,desc->'False is self-evident.'] :-
+  ?x:xf2Explanation[goal->\false].
+
+// If the goal is provided by the user, it is a basefact, and is
+// satisfied.
+?x:xf2BaseFact[satisfied->\true,desc->'Provided by user.'] :-
+  ?x:xf2Explanation[goal->?goal],
+  isbasefact{?goal}.
+
+// If there is a rule explanation, whether it is satisfied depends on
+// whether the rulebody is satisfied.
+?x[satisfied->?sat] :-
+  ?x:xf2Rule[subgoals->?_[satisfied->?sat]].
+
+// If the goal is the conclusion of a rule, there is a node for the
+// rule with one sub-node for the body.
+?x:xf2Rule[desc->'There is a rule.', subgoals->subgoal(?x,?body):xf2Explanation[goal->?body]] :-
+  ?x:xf2Explanation[goal->?goal],
+  clause{?goal, ?body}.
+
+// If the goal is a negation, it is satisfied if the negation is true.
+?x:xf2Negation[satisfied->\true, desc->'Negation.'] :-
+  //write('Checking for true negation.\n')@\io,
+  ?x:xf2Explanation[goal->?goal],
+  ?goal =.. [?g1|?g2],
+  //write(?g1)@\io, nl@\prolog, write(?g2)@\io, nl@\prolog,
+  ?g1 == negation(naf), // This is not working because the structure is {negation(naf),[${queries}]}.
+  \naf ?g2.
+
+// If the goal is a negation, it is not satisfied if the goal is true.
+?x:xf2Negation[satisfied->\false, desc->'Negation.'] :-
+  //write('Checking for false negation.\n')@\io,
+  ?x:xf2Explanation[goal->?goal],
+  ?goal =.. [?g1|?g2],
+  ?g1 == negation(naf),
+  ?g2.
+
+// If the goal is a conjunction, there is a subgoal for each of the parts of the second half.
+?x:xf2Conjunction[desc->'Conjunction.',subgoals->subgoal(?goal,?g3):xf2Explanation[goal->?g3]] :-
+  ?x:xf2Explanation[goal->?goal],
+  ?goal =.. [?g1|?g2],
+  ?g1 == logic(and),
+  ?g3 \in ?g2. // There is a list, and this rule should unify with all of the members.
+
+
+// If the goal is a conjunction, and all of the subgoals are satisfied, the goal is satisfied.
+?x[satisfied->\true] :-
+  ?x:xf2Conjunction,
+  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\true]).
+
+// If the goal is a conjunction, and not all of the subgoals are satisfied, the goal is not satisfied.
+?x[satisfied->\false] :-
+  ?x:xf2Conjunction,
+  ?x[subgoals->?_[satisfied->\false]].
+
+// If the goal is a disjunction, there is a subgoal for each of the parts of the second half.
+?x:xf2Disjunction[desc->'Disjunction.',subgoals->subgoal(?goal,?g3):xf2Explanation[goal->?g3]] :-
+  ?x:xf2Explanation[goal->?goal],
+  ?goal =.. [?g1|?g2],
+  ?g1 == logic(or),
+  ?g3 \in ?g2. // There is a list, and this rule should unify with all of the members.
+
+// If the goal is a disjunction, and any of the subgoals are satisfied, the goal is satisfied.
+?x[satisfied->\true] :-
+  ?x:xf2Disjunction,
+  ?x[subgoals->?_[satisfied->\true]].
+
+// If the goal is a disjunction, and all of the subgoals are not satisfied, the goal is not satisfied.
+?x[satisfied->\false] :-
+  ?x:xf2Disjunction,
+  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\false]).
+  
+
+
 
 
 explain(\true).
+
 explain(?Goal) :-
     clause{@!{?Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
     fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
@@ -134,45 +223,31 @@ explain(?Goal) :-
 //     fmt_write('%S is NOT a base fact.\n',args(?Goal))@\io,
 //     \false.
 
-// The following code sets out a tree structure for explanations to be built inside.
 
-Node[|goal=>\symbol,type=>NodeType,subnodes=>Node,satisfied=>\boolean,description=>\string|].
-Conjunction::NodeType.
-Disjunction::NodeType.
-Negation::NodeType.
-Rule::NodeType.
-Leaf::NodeType.
+this:Node[goal->\true,subnodes->that:Node[goal->${man(Socrates)},satisfied->\true]].
 
-?x[satisfied->\true] :-
-    ?x:Node,
-    ?x[type->Conjunction],
-    forall(?subs)^(?x[subnodes->?subs] ~~> ?subs[satisfied->\true]).
+the_other:Node[goal->\true,subnodes->thingy:Node[goal->${Wednesday[sibling->Pugsley]}]].
 
-?x[satisfied->\true] :-
-    ?x:Node,
-    ?x[type->Disjunction],
-    ?x[subs->?subs[satisfied->\true]].
+test:xf2Explanation[goal->\true]. // Note that \true and ${\true} work identically.
+test2:xf2Explanation[goal->\false].
 
-?x[satisfied->\true] :-
-    ?x:Node,
-    ?x[type->Negation,goal->?goal],
-    \naf ?goal.
+yummy(apples).
 
-?x[satisfied->\true] :-
-    ?x:Node,
-    ?x[type->Leaf,goal->?goal],
-    ?goal.
+test3:xf2Explanation[goal->${yummy(apples)}]. // Note that this does not work without reification.
 
-?x[description->'True is always true.',satisfied->\true,type->Leaf] :-
-    ?x:Node,
-    ?x[goal->${\true}].
+wet(road) :- raining.
+raining.
 
-?x[description->'This is a given fact.',satisfied->\true,type->Leaf] :-
-    ?x:Node[goal->?goal],
-    isbasefact{?goal}.
+test4:xf2Explanation[goal->${wet(road)}].
 
-printnode(?x) :-
-  ?x:Node[description->?desc,satisfied->?sat,type->?nt,goal->?goal],
-  fmt_write('With regard to %S:\n',args(?goal))@\io,
-  fmt_write('%S\n',args(?desc))@\io,
-  forall(?subs)^(?x[subnodes->?subs] ~~> printnode(?subs)).
+test5:xf2Explanation[goal->${\naf yummy(pears)}]. // This test is not working.
+
+t6a :-
+  yummy(apples),
+  wet(road).
+t6b :-
+  yummy(apples),
+  \false.
+
+test6a:xf2Explanation[goal->${t6a}].
+test6b:xf2Explanation[goal->${t6b}].
