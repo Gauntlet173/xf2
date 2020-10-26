@@ -1,0 +1,16 @@
+// An example Flora-2 file using the xf2 explain predicate
+// using predicate syntax in Ergo Lite
+
+// Load this module with the explanation modules in Flora-2:
+// ['mortal',+'xf2'].
+// then ask it to explain the answer to mortal(Socrates)
+// explain(${mortal(Socrates)}).
+
+@!{Humans_Are_Mortal[
+    source->'everyone',
+    description->'if you are human you are mortal'
+    ]}
+mortal(?X) :-
+  human(?X).
+
+human(Socrates).

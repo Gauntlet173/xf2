@@ -1,0 +1,178 @@
+// XF2 - Explained Flora-2
+//
+// XF2 is a module for use in the Flora-2 (Ergo Lite) logic programming language.
+// It is designed to create a tree-structured explanation for how a grounded
+// query is proven in Flora-2.
+//
+// It uses a meta-programming approach based on a paper DETAILS.
+//
+// It is created as part of the Singapore Management University Centre for
+// Computational Law's research into domain specific programming languages
+// for legal purposes.
+//
+// The project is working on a programming langauge called L4. One of the
+// intended features of the langauge is that it could be used to automate
+// calculations with regard to legal rules, and automatically generate human-
+// readable explanations for how those calculations were performed.
+//
+// If L4 could be tranlated into a Flora-2 representation, this
+// tool could be used to automatically add explainability to that code.
+//
+// Usage:
+//
+// Import this module into your Flora-2 project, and then use the
+// explain() predicate with a reified ground query (a query without
+// variables, surrounded by ${}).
+//
+// eg:
+// explain(${mortal(Socrates)}).
+//
+// Goals:
+// 1. Be able to generate explanations for all of the logical structures
+//    in Flora-2 rules.
+// 2. Have those explanations be generated in a tree-structured way to
+//    allow the users 
+//
+// Limitations:
+// TO DO
+
+
+explain(\true).
+explain(?Goal) :-
+    clause{@!{?Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
+    fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
+    fmt_write('%S can be proven if %S can be proven.\n',args(?Goal,?Body))@\io,
+    explain(?Body).
+
+// explain(?Goal) :-
+//     clause{@!{?Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
+//     fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
+//     fmt_write('%S can be proven if %S can be proven.\n',args(?Goal,?Body))@\io,
+//     \naf solve(?Body),
+//     fmt_write('%S cannot be proven.\n',args(?Body))@\io,
+//     \false.
+
+solve(?Goal) :-
+    //fmt_write('    Checking for and in %S.\n',args(?Goal))@\io,
+    ?Goal =.. [?Goal1|?Goal2],
+    ?Goal1 == logic(and),
+    //write('    And found.\n')@\io,
+    ?Goal2 = [?First|?Rest],
+    //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
+    explain(?First),
+    explain(?Rest),
+    fmt_write('Conjunction of %S and %S is satisfied.\n',args(?First,?Rest))@\io.
+
+// explain(?Goal) :-
+//     //fmt_write('    Checking for and in %S.\n',args(?Goal))@\io,
+//     ?Goal =.. [?Goal1|?Goal2],
+//     ?Goal1 == logic(and),
+//     //write('    And found.\n')@\io,
+//     ?Goal2 = [?First|?Rest],
+//     //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
+//     (\naf explain(?First); 
+//     \naf explain(?Rest)),
+//     fmt_write('Conjunction of %S and %S is NOT satisfied.\n',args(?First,?Rest))@\io,
+//     \false.
+
+explain(?Goal) :-
+    //fmt_write('    Checking for or in %S.\n',args(?Goal))@\io,
+    ?Goal =.. [?Goal1|?Goal2],
+    ?Goal1 == logic(or),
+    //write('    Or found.\n')@\io,
+    ?Goal2 = [?First|?Rest],
+    //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
+    (explain(?First);explain(?Rest)),
+    fmt_write('Disjunction of %S or %S is satisfied.\n',args(?First,?Rest))@\io.
+
+// explain(?Goal) :-
+//     //fmt_write('    Checking for or in %S.\n',args(?Goal))@\io,
+//     ?Goal =.. [?Goal1|?Goal2],
+//     ?Goal1 == logic(or),
+//     //write('    Or found.\n')@\io,
+//     ?Goal2 = [?First|?Rest],
+//     //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
+//     \naf explain(?First),
+//     \naf explain(?Rest),
+//     fmt_write('Disjunction of %S or %S is NOT satisfied.\n',args(?First,?Rest))@\io,
+//     \false.
+
+explain(?Goal) :-
+    //fmt_write('    Checking for naf in %S.\n',args(?Goal))@\io,
+    ?Goal =.. [?Goal1|?Goal2],
+    //fmt_write('    Divided %S into %S and %S.\n',args(?Goal,?Goal1,?Goal2))@\io,
+    ?Goal1 == negation(naf),
+    //write('    naf found.\n')@\io,
+    \naf explain(?Goal2),
+    fmt_write('Negation %S is true.\n',args(?Goal2))@\io.
+
+// explain(?Goal) :-
+//     //fmt_write('    Checking for naf in %S.\n',args(?Goal))@\io,
+//     ?Goal =.. [?Goal1|?Goal2],
+//     //fmt_write('    Divided %S into %S and %S.\n',args(?Goal,?Goal1,?Goal2))@\io,
+//     ?Goal1 == negation(naf),
+//     //write('    naf found.\n')@\io,
+//     explain(?Goal2),
+//     fmt_write('Negation %S is NOT true.\n',args(?Goal2))@\io,
+//     \false.
+
+explain([]). // Does this accidentally make OR always true?
+
+explain(?Goal) :-
+    //fmt_write('    Checking for list of clauses in %S.\n',args(?Goal))@\io,
+    ?Goal = [?First|?Rest],
+    //fmt_write('    List found, divided into %S and %S.\n',args(?First,?Rest))@\io,
+    explain(?First),
+    explain(?Rest).
+
+explain(?Goal) :-
+    isbasefact{?Goal},
+    fmt_write('%S is a base fact.\n',args(?Goal))@\io.
+
+// explain(?Goal) :-
+//     \naf isbasefact{?Goal},
+//     fmt_write('%S is NOT a base fact.\n',args(?Goal))@\io,
+//     \false.
+
+// The following code sets out a tree structure for explanations to be built inside.
+
+Node[|goal=>\symbol,type=>NodeType,subnodes=>Node,satisfied=>\boolean,description=>\string|].
+Conjunction::NodeType.
+Disjunction::NodeType.
+Negation::NodeType.
+Rule::NodeType.
+Leaf::NodeType.
+
+?x[satisfied->\true] :-
+    ?x:Node,
+    ?x[type->Conjunction],
+    forall(?subs)^(?x[subnodes->?subs] ~~> ?subs[satisfied->\true]).
+
+?x[satisfied->\true] :-
+    ?x:Node,
+    ?x[type->Disjunction],
+    ?x[subs->?subs[satisfied->\true]].
+
+?x[satisfied->\true] :-
+    ?x:Node,
+    ?x[type->Negation,goal->?goal],
+    \naf ?goal.
+
+?x[satisfied->\true] :-
+    ?x:Node,
+    ?x[type->Leaf,goal->?goal],
+    ?goal.
+
+?x[description->'True is always true.',satisfied->\true,type->Leaf] :-
+    ?x:Node,
+    ?x[goal->${\true}].
+
+?x[description->'This is a given fact.',satisfied->\true,type->Leaf] :-
+    ?x:Node[goal->?goal],
+    isbasefact{?goal}.
+
+printnode(?x) :-
+  ?x:Node[description->?desc,satisfied->?sat,type->?nt,goal->?goal],
+  fmt_write('With regard to %S:\n',args(?goal))@\io,
+  fmt_write('%S\n',args(?desc))@\io,
+  forall(?subs)^(?x[subnodes->?subs] ~~> printnode(?subs)).

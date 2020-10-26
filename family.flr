@@ -1,0 +1,31 @@
+// An example Flora-2 file using the xf2 explain predicate
+// using frame syntax in Ergo Lite
+
+// Load this module with the explanation modules in Flora-2:
+// ['family',+'xf2'].
+// then ask it to explain the answer to mortal(Socrates)
+// explain(${Wednesday[sibling->Pugsley]}).
+
+Person[|
+    child=>Person
+    |].
+
+Morticia:Person[
+    child->{Pugsley,Wednesday}
+    ].
+
+Gomez:Person[
+    child->{Pugsley,Wednesday}
+    ].
+
+Wednesday:Person.
+Pugsley:Person.
+
+@!{Siblings_Share_Parents[
+    source->'science',
+    description->'siblings are two people with the same parents']}
+?X[sibling->?Y] :-
+  ?X:Person,
+  ?Y:Person,
+  forall(?parents)^(?parents:Person[child->?X] ~~> ?parents[child->?Y]).
+
