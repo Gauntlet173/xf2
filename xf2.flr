@@ -2,12 +2,11 @@
 // By Jason Morris for Singapore Management University Centre for Computational Law
 //
 // TO DO:
-// * Currently working on getting a basic display of the decision tree working.
-//   Right now the display method on the explanation objects runs only once.
+// * The display method is displaying the same messages multiple times.
+// * Right now the display method on the explanation objects runs only once.
 //   There is documentation in the ErgoAI documentation google folder that shows
 //   how to make it run repeatedly.
 // * Need to get negations working. Not sure how to parse lists associated with them.
-// * Need to get conjunction and disjunction working. Having problems with the lists.
 
 :- compiler_options{expert=on}.
 
@@ -24,16 +23,17 @@ xf2Explanation[|
   ?x[display(0)].
 
 ?x[display(?n)] :-
-  ?x:xf2Explanation[desc->?d,goal->?g],
-  tab(?n)@\prolog,
-  write(?d)@\io,
-  write('\n')@\io,
+  ?x:xf2Explanation[desc->?d,goal->?g,satisfied->?s],
   tab(?n)@\prolog,
   write('Goal: ')@\io,
   write(?g)@\io,
+  \if ?s \then write(' is satisfied.\n')@\io \else write(' is not satisfied.\n')@\io,
+  tab(?n)@\prolog,
+  write(?d)@\io,
   write('\n')@\io,
   ?o \is ?n+1,
-  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[display(?o)]).
+  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[display(?o)]),
+  !.
 
 xf2Bool::xf2Explanation.
 xf2Conjunction::xf2Explanation.
@@ -42,32 +42,39 @@ xf2Negation::xf2Explanation.
 xf2BaseFact::xf2Explanation.
 xf2Rule::xf2Explanation.
 
+// debugging(on).
+
 // If the goal of an explanation is "\true", it is satisfied,
 // because true is always true.
 ?x:xf2Bool[satisfied->\true,desc->'True is self-evident.'] :-
-  ?x:xf2Explanation[goal->\true].
+  ?x:xf2Explanation[goal->\true],
+  \if debugging(on) \then write('Found \\true goal, set to satisfied.\n')@\io.
 
 // If the goal of an explanation is "\false", it is not satisfied,
 // because false is always false.
 ?x:xf2Bool[satisfied->\false,desc->'False is self-evident.'] :-
-  ?x:xf2Explanation[goal->\false].
+  ?x:xf2Explanation[goal->\false],
+  \if debugging(on) \then write('Found \\false goal, set to satisfied.\n')@\io.
 
 // If the goal is provided by the user, it is a basefact, and is
 // satisfied.
-?x:xf2BaseFact[satisfied->\true,desc->'Provided by user.'] :-
+?x:xf2BaseFact[satisfied->\true,desc->'Answer was provided by user.'] :-
   ?x:xf2Explanation[goal->?goal],
-  isbasefact{?goal}.
+  isbasefact{?goal},
+  \if debugging(on) \then write('Found basefact goal, set to satisfied.\n')@\io.
 
 // If there is a rule explanation, whether it is satisfied depends on
 // whether the rulebody is satisfied.
 ?x[satisfied->?sat] :-
-  ?x:xf2Rule[subgoals->?_[satisfied->?sat]].
+  ?x:xf2Rule[subgoals->?_[satisfied->?sat]],
+  \if debugging(on) \then write('Setting satisfaction of rule.\n')@\io.
 
 // If the goal is the conclusion of a rule, there is a node for the
 // rule with one sub-node for the body.
 ?x:xf2Rule[desc->'There is a rule.', subgoals->subgoal(?x,?body):xf2Explanation[goal->?body]] :-
   ?x:xf2Explanation[goal->?goal],
-  clause{?goal, ?body}.
+  clause{?goal, ?body},
+  \if debugging(on) \then write('Adding a body node to a rule.\n')@\io.
 
 // If the goal is a negation, it is satisfied if the negation is true.
 ?x:xf2Negation[satisfied->\true, desc->'Negation.'] :-
@@ -75,8 +82,10 @@ xf2Rule::xf2Explanation.
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   //write(?g1)@\io, nl@\prolog, write(?g2)@\io, nl@\prolog,
-  ?g1 == negation(naf), // This is not working because the structure is {negation(naf),[${queries}]}.
-  \naf ?g2.
+  ?g1 == negation(naf), // This is not working because the structure is {negation(naf),[${queries}]}?
+  \true, // Just for debugging purposes.
+  \if debugging(on) \then write('Pretending to find successful negation.\n')@\io.
+
 
 // If the goal is a negation, it is not satisfied if the goal is true.
 ?x:xf2Negation[satisfied->\false, desc->'Negation.'] :-
@@ -84,149 +93,58 @@ xf2Rule::xf2Explanation.
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == negation(naf),
-  ?g2.
+  \false, // Just for debugging purposes.
+  \if debugging(on) \then write('Pretending to find unsuccessful negation.\n')@\io.
 
 // If the goal is a conjunction, there is a subgoal for each of the parts of the second half.
 ?x:xf2Conjunction[desc->'Conjunction.',subgoals->subgoal(?goal,?g3):xf2Explanation[goal->?g3]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == logic(and),
-  ?g3 \in ?g2. // There is a list, and this rule should unify with all of the members.
-
+  ?g3 \in ?g2, // There is a list, and this rule should unify with all of the members.
+  \if debugging(on) \then write('Adding a subgoal to a conjunction.\n')@\io.
 
 // If the goal is a conjunction, and all of the subgoals are satisfied, the goal is satisfied.
 ?x[satisfied->\true] :-
   ?x:xf2Conjunction,
-  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\true]).
+  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\true]),
+  \if debugging(on) \then write('Finding a satisfied conjunction.\n')@\io.
 
 // If the goal is a conjunction, and not all of the subgoals are satisfied, the goal is not satisfied.
 ?x[satisfied->\false] :-
   ?x:xf2Conjunction,
-  ?x[subgoals->?_[satisfied->\false]].
+  ?x[subgoals->?_[satisfied->\false]],
+  \if debugging(on) \then write('Finding an unsatisfied conjunction.\n')@\io.
 
 // If the goal is a disjunction, there is a subgoal for each of the parts of the second half.
 ?x:xf2Disjunction[desc->'Disjunction.',subgoals->subgoal(?goal,?g3):xf2Explanation[goal->?g3]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == logic(or),
-  ?g3 \in ?g2. // There is a list, and this rule should unify with all of the members.
+  ?g3 \in ?g2, // There is a list, and this rule should unify with all of the members.
+  \if debugging(on) \then write('Adding a subgoal to a disjunction.\n')@\io.
 
 // If the goal is a disjunction, and any of the subgoals are satisfied, the goal is satisfied.
 ?x[satisfied->\true] :-
   ?x:xf2Disjunction,
-  ?x[subgoals->?_[satisfied->\true]].
+  ?x[subgoals->?_[satisfied->\true]],
+  \if debugging(on) \then write('Finding a satisfied disjunction.\n')@\io.
 
 // If the goal is a disjunction, and all of the subgoals are not satisfied, the goal is not satisfied.
 ?x[satisfied->\false] :-
   ?x:xf2Disjunction,
-  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\false]).
+  forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\false]),
+  \if debugging(on) \then write('Finding an unsatisfied disjunction.\n')@\io.
   
 
-
-
-
-explain(\true).
-
-explain(?Goal) :-
-    clause{@!{?Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
-    fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
-    fmt_write('%S can be proven if %S can be proven.\n',args(?Goal,?Body))@\io,
-    explain(?Body).
-
 // explain(?Goal) :-
-//     clause{@!{?Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
-//     fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
-//     fmt_write('%S can be proven if %S can be proven.\n',args(?Goal,?Body))@\io,
-//     \naf solve(?Body),
-//     fmt_write('%S cannot be proven.\n',args(?Body))@\io,
-//     \false.
-
-solve(?Goal) :-
-    //fmt_write('    Checking for and in %S.\n',args(?Goal))@\io,
-    ?Goal =.. [?Goal1|?Goal2],
-    ?Goal1 == logic(and),
-    //write('    And found.\n')@\io,
-    ?Goal2 = [?First|?Rest],
-    //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
-    explain(?First),
-    explain(?Rest),
-    fmt_write('Conjunction of %S and %S is satisfied.\n',args(?First,?Rest))@\io.
-
-// explain(?Goal) :-
-//     //fmt_write('    Checking for and in %S.\n',args(?Goal))@\io,
-//     ?Goal =.. [?Goal1|?Goal2],
-//     ?Goal1 == logic(and),
-//     //write('    And found.\n')@\io,
-//     ?Goal2 = [?First|?Rest],
-//     //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
-//     (\naf explain(?First); 
-//     \naf explain(?Rest)),
-//     fmt_write('Conjunction of %S and %S is NOT satisfied.\n',args(?First,?Rest))@\io,
-//     \false.
-
-explain(?Goal) :-
-    //fmt_write('    Checking for or in %S.\n',args(?Goal))@\io,
-    ?Goal =.. [?Goal1|?Goal2],
-    ?Goal1 == logic(or),
-    //write('    Or found.\n')@\io,
-    ?Goal2 = [?First|?Rest],
-    //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
-    (explain(?First);explain(?Rest)),
-    fmt_write('Disjunction of %S or %S is satisfied.\n',args(?First,?Rest))@\io.
-
-// explain(?Goal) :-
-//     //fmt_write('    Checking for or in %S.\n',args(?Goal))@\io,
-//     ?Goal =.. [?Goal1|?Goal2],
-//     ?Goal1 == logic(or),
-//     //write('    Or found.\n')@\io,
-//     ?Goal2 = [?First|?Rest],
-//     //fmt_write('    Dividing %S into %S and %S.\n',args(?Goal,?First,?Rest))@\io,
-//     \naf explain(?First),
-//     \naf explain(?Rest),
-//     fmt_write('Disjunction of %S or %S is NOT satisfied.\n',args(?First,?Rest))@\io,
-//     \false.
-
-explain(?Goal) :-
-    //fmt_write('    Checking for naf in %S.\n',args(?Goal))@\io,
-    ?Goal =.. [?Goal1|?Goal2],
-    //fmt_write('    Divided %S into %S and %S.\n',args(?Goal,?Goal1,?Goal2))@\io,
-    ?Goal1 == negation(naf),
-    //write('    naf found.\n')@\io,
-    \naf explain(?Goal2),
-    fmt_write('Negation %S is true.\n',args(?Goal2))@\io.
-
-// explain(?Goal) :-
-//     //fmt_write('    Checking for naf in %S.\n',args(?Goal))@\io,
-//     ?Goal =.. [?Goal1|?Goal2],
-//     //fmt_write('    Divided %S into %S and %S.\n',args(?Goal,?Goal1,?Goal2))@\io,
-//     ?Goal1 == negation(naf),
-//     //write('    naf found.\n')@\io,
-//     explain(?Goal2),
-//     fmt_write('Negation %S is NOT true.\n',args(?Goal2))@\io,
-//     \false.
-
-explain([]). // Does this accidentally make OR always true?
-
-explain(?Goal) :-
-    //fmt_write('    Checking for list of clauses in %S.\n',args(?Goal))@\io,
-    ?Goal = [?First|?Rest],
-    //fmt_write('    List found, divided into %S and %S.\n',args(?First,?Rest))@\io,
-    explain(?First),
-    explain(?Rest).
-
-explain(?Goal) :-
-    isbasefact{?Goal},
-    fmt_write('%S is a base fact.\n',args(?Goal))@\io.
-
-// explain(?Goal) :-
-//     \naf isbasefact{?Goal},
-//     fmt_write('%S is NOT a base fact.\n',args(?Goal))@\io,
-//     \false.
+//   clause{@!{?_Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
+//    fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
+//    fmt_write('%S can be proven if %S can be proven.\n',args(?Goal,?Body))@\io,
+//    explain(?Body).
 
 
-this:Node[goal->\true,subnodes->that:Node[goal->${man(Socrates)},satisfied->\true]].
-
-the_other:Node[goal->\true,subnodes->thingy:Node[goal->${Wednesday[sibling->Pugsley]}]].
+// Tests
 
 test:xf2Explanation[goal->\true]. // Note that \true and ${\true} work identically.
 test2:xf2Explanation[goal->\false].
