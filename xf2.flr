@@ -2,13 +2,16 @@
 // By Jason Morris for Singapore Management University Centre for Computational Law
 //
 // TO DO:
-// * The display method is displaying the same messages multiple times.
 // * Right now the display method on the explanation objects runs only once.
 //   There is documentation in the ErgoAI documentation google folder that shows
 //   how to make it run repeatedly.
-// * Need to get negations working. Not sure how to parse lists associated with them.
+// * Satisfied negations are being displayed twice in the display process.
+// * Figure out if removing context from the subgoal objects would speed answers.
+// * Figure out why generating an explanation for wednesday[sibling->Pugsley] generates
+//   100 warnings about unbound variables. (Probably negation issues.)
 
 :- compiler_options{expert=on}.
+?- setruntime{unsafe_naf(ignore)}.
 
 // The following code sets out a tree structure for explanations to be built inside.
 
@@ -71,33 +74,36 @@ xf2Rule::xf2Explanation.
 
 // If the goal is the conclusion of a rule, there is a node for the
 // rule with one sub-node for the body.
-?x:xf2Rule[desc->'There is a rule.', subgoals->subgoal(?x,?body):xf2Explanation[goal->?body]] :-
+?x:xf2Rule[desc->?d, subgoals->subgoal(?body):xf2Explanation[goal->?body]] :-
   ?x:xf2Explanation[goal->?goal],
-  clause{?goal, ?body},
-  \if debugging(on) \then write('Adding a body node to a rule.\n')@\io.
+  clause{?goal,?body},
+  \if clause{@!{?_Tag[description->?desc]} ?goal, ?body}
+  \then "There is a rule: "^^\string[concat(?desc)->?d]@\basetype
+  \else ?d = "There is a rule."^^\string,
+  \if debugging(on) \then write('Adding a body node to a rule with a description.\n')@\io.
 
-// If the goal is a negation, it is satisfied if the negation is true.
-?x:xf2Negation[satisfied->\true, desc->'Negation.'] :-
-  //write('Checking for true negation.\n')@\io,
-  ?x:xf2Explanation[goal->?goal],
-  ?goal =.. [?g1|?g2],
-  //write(?g1)@\io, nl@\prolog, write(?g2)@\io, nl@\prolog,
-  ?g1 == negation(naf), // This is not working because the structure is {negation(naf),[${queries}]}?
-  \true, // Just for debugging purposes.
-  \if debugging(on) \then write('Pretending to find successful negation.\n')@\io.
-
-
-// If the goal is a negation, it is not satisfied if the goal is true.
-?x:xf2Negation[satisfied->\false, desc->'Negation.'] :-
-  //write('Checking for false negation.\n')@\io,
+// If the goal is a negation, the subgoal is the negated part
+?x:xf2Negation[desc->'Negation.', subgoals->subgoal(?first):xf2Explanation[goal->?first]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == negation(naf),
-  \false, // Just for debugging purposes.
-  \if debugging(on) \then write('Pretending to find unsuccessful negation.\n')@\io.
+  ?g2 = [?first|?_rest], // This presumes negations will only ever have one item in the list, as they are unary operators.
+  \if debugging(on) \then write('Adding subnode to negation.\n')@\io.
+
+// A negation is satisfied if its subgoal is not.
+// This tests for whether there is a \naf of satisfied->\true, because
+// searching for false is never found for objects that don't exist?
+?x[satisfied->\true] :-
+  ?x:xf2Negation[subgoals->?_sg[\naf satisfied->\true]],
+  \if debugging(on) \then write('Negation satisfied.\n')@\io.
+
+// A negation is not satisfied if its subgoal is.
+?x[satisfied->\false] :-
+  ?x:xf2Negation[subgoals->?_sg[satisfied->\true]],
+  \if debugging(on) \then write('Negation not satisfied.\n')@\io.
 
 // If the goal is a conjunction, there is a subgoal for each of the parts of the second half.
-?x:xf2Conjunction[desc->'Conjunction.',subgoals->subgoal(?goal,?g3):xf2Explanation[goal->?g3]] :-
+?x:xf2Conjunction[desc->'Conjunction.',subgoals->subgoal(?g3):xf2Explanation[goal->?g3]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == logic(and),
@@ -117,7 +123,7 @@ xf2Rule::xf2Explanation.
   \if debugging(on) \then write('Finding an unsatisfied conjunction.\n')@\io.
 
 // If the goal is a disjunction, there is a subgoal for each of the parts of the second half.
-?x:xf2Disjunction[desc->'Disjunction.',subgoals->subgoal(?goal,?g3):xf2Explanation[goal->?g3]] :-
+?x:xf2Disjunction[desc->'Disjunction.',subgoals->subgoal(?g3):xf2Explanation[goal->?g3]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == logic(or),
@@ -135,7 +141,6 @@ xf2Rule::xf2Explanation.
   ?x:xf2Disjunction,
   forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\false]),
   \if debugging(on) \then write('Finding an unsatisfied disjunction.\n')@\io.
-  
 
 // explain(?Goal) :-
 //   clause{@!{?_Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
@@ -146,19 +151,27 @@ xf2Rule::xf2Explanation.
 
 // Tests
 
-test:xf2Explanation[goal->\true]. // Note that \true and ${\true} work identically.
+test1:xf2Explanation[goal->\true]. // Note that \true and ${\true} work identically.
+?- test1[display].
+
 test2:xf2Explanation[goal->\false].
+?- test2[display].
 
 yummy(apples).
 
 test3:xf2Explanation[goal->${yummy(apples)}]. // Note that this does not work without reification.
+?- test3[display].
 
 wet(road) :- raining.
 raining.
 
 test4:xf2Explanation[goal->${wet(road)}].
+?- test4[display].
 
-test5:xf2Explanation[goal->${\naf yummy(pears)}]. // This test is not working.
+test5a:xf2Explanation[goal->${\naf yummy(pears)}].
+?- test5a[display].
+test5b:xf2Explanation[goal->${\naf yummy(apples)}].
+?- test5b[display].
 
 t6a :-
   yummy(apples),
@@ -168,4 +181,10 @@ t6b :-
   \false.
 
 test6a:xf2Explanation[goal->${t6a}].
+?- test6a[display].
 test6b:xf2Explanation[goal->${t6b}].
+?- test6b[display].
+
+?- [+'family'].
+test7:xf2Explanation[goal->${Wednesday[sibling->Pugsley]}].
+?- test7[display].
