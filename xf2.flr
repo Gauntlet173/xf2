@@ -147,11 +147,6 @@ xf2Rule::xf2Explanation.
   forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\false]),
   \if debugging(on) \then write('Finding an unsatisfied disjunction.\n')@\io.
 
-// explain(?Goal) :-
-//   clause{@!{?_Tag[source->?SRC,description->?DSC]} ?Goal,?Body},
-//    fmt_write('According to %S, %S.\n',args(?SRC,?DSC))@\io,
-//    fmt_write('%S can be proven if %S can be proven.\n',args(?Goal,?Body))@\io,
-//    explain(?Body).
 
 
 // Tests
