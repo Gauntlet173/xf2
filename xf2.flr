@@ -2,13 +2,14 @@
 // By Jason Morris for Singapore Management University Centre for Computational Law
 //
 // TO DO:
+// * Make it so that nested AND and OR elements are at the same level.
 // * Right now the display method on the explanation objects runs only once.
 //   There is documentation in the ErgoAI documentation google folder that shows
 //   how to make it run repeatedly.
-// * Satisfied negations are being displayed twice in the display process.
-// * Figure out if removing context from the subgoal objects would speed answers.
 // * Figure out why generating an explanation for wednesday[sibling->Pugsley] generates
 //   100 warnings about unbound variables. (Probably negation issues.)
+// * Think about adding prolog negation.
+
 
 :- compiler_options{expert=on}.
 ?- setruntime{unsafe_naf(ignore)}.
@@ -25,14 +26,27 @@ xf2Explanation[|
   ?x:xf2Explanation,
   ?x[display(0)].
 
+remove_reification(?original,?new) :-
+  substitute('\$\{',?original,'',?_temp)@\prolog(pcre),
+  substitute('\}',?_temp,'',?_temp2)@\prolog(pcre),
+  substitute('\@main',?_temp2,'',?_temp3)@\prolog(pcre),
+  substitute('\\\\naf',?_temp3,'it is not true that',?_temp4)@\prolog(pcre),
+  substitute(', ',?_temp4,' and ',?_temp5)@\prolog(pcre),
+  substitute('\[',?_temp5,' has a ',?_temp6)@\prolog(pcre),
+  substitute('\-\>',?_temp6,', ',?_temp7)@\prolog(pcre),
+  substitute('\]',?_temp7,'',?_temp8)@\prolog(pcre),
+  substitute('\?',?_temp8,'an object ',?new)@\prolog(pcre).
+
 ?x[display(?n)] :-
   ?x:xf2Explanation[desc->?d,goal->?g,satisfied->?s],
   tab(?n)@\prolog,
-  write('Goal: ')@\io,
+  \if ?n == 0 \then write('Goal: ')@\io \else write('Subgoal: ')@\io,
   \symbol[toType(?g)->?rg]@\basetype,
   \string[toType(?rg)->?sg]@\basetype,
   // At this point it would be possible to do string manipulation if I had the libraries
-  ?sg[rawValue->?rsg]@\basetype,
+  remove_reification(?sg,?newsg),
+  substitute(':',?newsg,' is a ',?newsg2)@\prolog(pcre),
+  ?newsg2[rawValue->?rsg]@\basetype,
   write(?rsg)@\io,
   \if ?s \then write(' is satisfied.\n')@\io \else write(' is not satisfied.\n')@\io,
   tab(?n)@\prolog,
@@ -66,7 +80,7 @@ xf2Rule::xf2Explanation.
 
 // If the goal is provided by the user, it is a basefact, and is
 // satisfied.
-?x:xf2BaseFact[satisfied->\true,desc->'Answer was provided by user.'] :-
+?x:xf2BaseFact[satisfied->\true,desc->'We know this because it was stated by the user.'] :-
   ?x:xf2Explanation[goal->?goal],
   isbasefact{?goal},
   \if debugging(on) \then write('Found basefact goal, set to satisfied.\n')@\io.
@@ -83,12 +97,12 @@ xf2Rule::xf2Explanation.
   ?x:xf2Explanation[goal->?goal],
   clause{?goal,?body},
   \if clause{@!{?_Tag[description->?desc]} ?goal, ?body}
-  \then "There is a rule: "^^\string[concat(?desc)->?d]@\basetype
-  \else ?d = "There is a rule."^^\string,
+  \then "We know this because there is a rule: "^^\string[concat(?desc)->?d]@\basetype
+  \else ?d = "We know this because there is a rule."^^\string,
   \if debugging(on) \then write('Adding a body node to a rule with a description.\n')@\io.
 
 // If the goal is a negation, the subgoal is the negated part
-?x:xf2Negation[desc->'Negation.', subgoals->subgoal(?first):xf2Explanation[goal->?first]] :-
+?x:xf2Negation[desc->'', subgoals->subgoal(?first):xf2Explanation[goal->?first]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == negation(naf),
@@ -108,7 +122,7 @@ xf2Rule::xf2Explanation.
   \if debugging(on) \then write('Negation not satisfied.\n')@\io.
 
 // If the goal is a conjunction, there is a subgoal for each of the parts of the second half.
-?x:xf2Conjunction[desc->'Conjunction.',subgoals->subgoal(?g3):xf2Explanation[goal->?g3]] :-
+?x:xf2Conjunction[desc->'',subgoals->subgoal(?g3):xf2Explanation[goal->?g3]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == logic(and),
@@ -128,7 +142,7 @@ xf2Rule::xf2Explanation.
   \if debugging(on) \then write('Finding an unsatisfied conjunction.\n')@\io.
 
 // If the goal is a disjunction, there is a subgoal for each of the parts of the second half.
-?x:xf2Disjunction[desc->'Disjunction.',subgoals->subgoal(?g3):xf2Explanation[goal->?g3]] :-
+?x:xf2Disjunction[desc->'',subgoals->subgoal(?g3):xf2Explanation[goal->?g3]] :-
   ?x:xf2Explanation[goal->?goal],
   ?goal =.. [?g1|?g2],
   ?g1 == logic(or),
@@ -146,45 +160,3 @@ xf2Rule::xf2Explanation.
   ?x:xf2Disjunction,
   forall(?subs)^(?x[subgoals->?subs] ~~> ?subs[satisfied->\false]),
   \if debugging(on) \then write('Finding an unsatisfied disjunction.\n')@\io.
-
-
-
-// Tests
-
-test1:xf2Explanation[goal->\true]. // Note that \true and ${\true} work identically.
-?- test1[display].
-
-test2:xf2Explanation[goal->\false].
-?- test2[display].
-
-yummy(apples).
-
-test3:xf2Explanation[goal->${yummy(apples)}]. // Note that this does not work without reification.
-?- test3[display].
-
-wet(road) :- raining.
-raining.
-
-test4:xf2Explanation[goal->${wet(road)}].
-?- test4[display].
-
-test5a:xf2Explanation[goal->${\naf yummy(pears)}].
-?- test5a[display].
-test5b:xf2Explanation[goal->${\naf yummy(apples)}].
-?- test5b[display].
-
-t6a :-
-  yummy(apples),
-  wet(road).
-t6b :-
-  yummy(apples),
-  \false.
-
-test6a:xf2Explanation[goal->${t6a}].
-?- test6a[display].
-test6b:xf2Explanation[goal->${t6b}].
-?- test6b[display].
-
-?- [+'family'].
-test7:xf2Explanation[goal->${Wednesday[sibling->Pugsley]}].
-?- test7[display].

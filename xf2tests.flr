@@ -1,0 +1,40 @@
+// Tests
+?- [+'xf2'].
+
+test1:xf2Explanation[goal->\true]. // Note that \true and ${\true} work identically.
+?- test1[display].
+
+test2:xf2Explanation[goal->\false].
+?- test2[display].
+
+yummy(apples).
+
+test3:xf2Explanation[goal->${yummy(apples)}]. // Note that this does not work without reification.
+?- test3[display].
+
+wet(road) :- raining.
+raining.
+
+test4:xf2Explanation[goal->${wet(road)}].
+?- test4[display].
+
+test5a:xf2Explanation[goal->${\naf yummy(pears)}].
+?- test5a[display].
+test5b:xf2Explanation[goal->${\naf yummy(apples)}].
+?- test5b[display].
+
+t6a :-
+  yummy(apples),
+  wet(road).
+t6b :-
+  yummy(apples),
+  \false.
+
+test6a:xf2Explanation[goal->${t6a}].
+?- test6a[display].
+test6b:xf2Explanation[goal->${t6b}].
+?- test6b[display].
+
+?- [+'family'].
+test7:xf2Explanation[goal->${Wednesday[sibling->Pugsley]}].
+?- test7[display].
