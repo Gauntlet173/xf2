@@ -37,6 +37,8 @@ Then, you can display the explanation by calling `e[display]`.
 
 In these exapmles `e` can be replaced with whatever you want.
 
+Provided tests can be run by executing `['xf2tests'].` in Flora-2.
+
 ## Current Goals
 
 * Generate tree-structured explanations for predicate or frame ground queries
