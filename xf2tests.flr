@@ -38,3 +38,11 @@ test6b:xf2Explanation[goal->${t6b}].
 ?- [+'family'].
 test7:xf2Explanation[goal->${Wednesday[sibling->Pugsley]}].
 ?- test7[display].
+
+\neg prolog_negation :-
+  pn,
+  \neg (pn2, pn3).
+pn.
+\neg pn2.
+test8:xf2Explanation[goal->${\neg prolog_negation}].
+?- test8[display].

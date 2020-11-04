@@ -43,4 +43,4 @@ Provided tests can be run by executing `['xf2tests'].` in Flora-2.
 
 * Generate tree-structured explanations for predicate or frame ground queries
   that use conjunction, disjunction, naf negation, base facts, and boolean truth
-  values.
+  values. 

@@ -8,7 +8,7 @@
 //   how to make it run repeatedly.
 // * Figure out why generating an explanation for wednesday[sibling->Pugsley] generates
 //   100 warnings about unbound variables. (Probably negation issues.)
-// * Think about adding prolog negation.
+// * Explanations involving prolog-style negation do not include all the required subgoals.
 
 
 :- compiler_options{expert=on}.
@@ -31,11 +31,13 @@ remove_reification(?original,?new) :-
   substitute('\}',?_temp,'',?_temp2)@\prolog(pcre),
   substitute('\@main',?_temp2,'',?_temp3)@\prolog(pcre),
   substitute('\\\\naf',?_temp3,'it is not true that',?_temp4)@\prolog(pcre),
-  substitute(', ',?_temp4,' and ',?_temp5)@\prolog(pcre),
-  substitute('\[',?_temp5,' has a ',?_temp6)@\prolog(pcre),
-  substitute('\-\>',?_temp6,', ',?_temp7)@\prolog(pcre),
-  substitute('\]',?_temp7,'',?_temp8)@\prolog(pcre),
-  substitute('\?',?_temp8,'an object ',?new)@\prolog(pcre).
+  substitute('\\\\neg',?_temp4,'it is provably false that',?_temp5)@\prolog(pcre),
+  substitute(', ',?_temp5,' and ',?_temp6)@\prolog(pcre),
+  substitute('; ',?_temp6,' or ',?_temp7)@\prolog(pcre),
+  substitute('\[',?_temp7,' has a ',?_temp8)@\prolog(pcre),
+  substitute('\-\>',?_temp8,', ',?_temp9)@\prolog(pcre),
+  substitute('\]',?_temp9,'',?_temp10)@\prolog(pcre),
+  substitute('\?',?_temp10,'an object ',?new)@\prolog(pcre).
 
 ?x[display(?n)] :-
   ?x:xf2Explanation[desc->?d,goal->?g,satisfied->?s],
