@@ -1,4 +1,108 @@
 // SAFE.flr
 // An implementation of Y-Combinator's Simple Agreement for Future Equity in Ergo Lite.
-//
 
+:- compiler_options{expert=on}.
+
+// Ontological Declarations
+
+Safe[|
+    investor=>Person,
+    company=>Organization,
+    date_of_safe=>\date,
+    post_money_valuation_cap=>\currency,
+    discount_rate=>\double,
+    purchase_amount=>\currency
+|].
+
+Person[|
+    has_right_to_certain_shares=>\boolean
+|].
+
+Organization[|
+    company_name=>\string,
+    state_of_incorporation=>\string
+|].
+
+Organization::Person.
+
+Event[|
+    action=>Action,
+    date_of_event=>\date
+|].
+
+Action[|
+
+|].
+
+Payment::Action[|
+    payor=>\Person,
+    payee=>\Person,
+    amount=>\currency
+|].
+
+Issuance::Action[|
+    grantor=>\Person,
+    grantee=>\Person,
+    object=>Issuable
+|].
+
+rights_to_certain_shares:Issuable.
+
+Obligation[|
+    action=>Action,
+    satisfied=>\boolean,
+    deadline=>\date
+|].
+
+// Generic rule that an obligation is satisfied if the requires action
+// has been taken.
+
+// PREAMBLE
+// Not going to deal with this now.
+
+
+// THIS CERTIFIES THAT in exchange for the payment by [Investor Name] (the “Investor”) of $[_____________] (the “Purchase Amount”) on or about [Date of Safe], [Company Name], a [State of Incorporation] corporation (the “Company”), issues to the Investor the right to certain shares of the Company’s Capital Stock, subject to the terms described below. 
+
+\#:Obligation[
+    action->\#:Issuance[
+        grantor->?com,
+        grantee->?inv,
+        object->rights_to_certain_shares
+    ]
+]
+ :-
+  ?_safe:Safe[
+    investor->?inv,
+    company->?com,
+    purchase_amount->?pa,
+    date_of_safe->?date],
+  ?_event:Event[
+    action->?ea,
+    date_of_event->?de],
+  ?ea:Payment[
+    payee->?com,
+    payor->?inv,
+    amount->?pa],
+  on_or_about(?date,?de,?out),
+  ?out = \true.
+
+// Test of the above section
+abcInc:Company[].
+personA:Person[].
+testSafe:Safe[
+    investor->personA,
+    company->abcInc,
+    purchase_amount->"USD 100000"^^\currency,
+    date_of_safe->"2020-11-04"^^\date
+].
+payment_event:Event[
+    action->payment_action:Payment[
+        payor->personA,
+        payee->abcInc,
+        amount->"USD 100000"^^\currency
+    ],
+    date_of_event->"2020-11-04"^^\date
+].
+
+on_or_about(?d1,?d2,\true) :-
+  ?d1 == ?d2.

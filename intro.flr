@@ -1,0 +1,13 @@
+// Intro to Ergo Lite
+
+Person[|
+  human=>\boolean,
+  mortal=>\boolean
+|].
+
+Socrates:Person[human->\true].
+
+?x[mortal->\true] :-
+  ?x:Person[human->\true].
+
+?- ?x:Person[mortal->\true].
