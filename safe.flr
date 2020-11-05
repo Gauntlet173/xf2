@@ -27,7 +27,8 @@ Organization::Person.
 
 Event[|
     action=>Action,
-    date_of_event=>\date
+    date_of_event=>\date,
+    duration_of_event=>\duration
 |].
 
 Action[|
@@ -35,18 +36,19 @@ Action[|
 |].
 
 Payment::Action[|
-    payor=>\Person,
-    payee=>\Person,
+    payor=>Person,
+    payee=>Person,
     amount=>\currency
 |].
 
-Issuance::Action[|
-    grantor=>\Person,
-    grantee=>\Person,
-    object=>Issuable
+Transfer::Action[|
+    transferor=>Person,
+    transferee=>Person,
+    object=>Transferable,
+    quantity=>\double
 |].
 
-rights_to_certain_shares:Issuable.
+rights_to_certain_shares:Transferable.
 
 Obligation[|
     action=>Action,
@@ -64,10 +66,11 @@ Obligation[|
 // THIS CERTIFIES THAT in exchange for the payment by [Investor Name] (the “Investor”) of $[_____________] (the “Purchase Amount”) on or about [Date of Safe], [Company Name], a [State of Incorporation] corporation (the “Company”), issues to the Investor the right to certain shares of the Company’s Capital Stock, subject to the terms described below. 
 
 \#:Obligation[
-    action->\#:Issuance[
-        grantor->?com,
-        grantee->?inv,
-        object->rights_to_certain_shares
+    action->\#:Transfer[
+        transferor->?com,
+        transferee->?inv,
+        object->rights_to_certain_shares,
+        quantity->1
     ]
 ]
  :-
@@ -83,8 +86,7 @@ Obligation[|
     payee->?com,
     payor->?inv,
     amount->?pa],
-  on_or_about(?date,?de,?out),
-  ?out = \true.
+  on_or_about(?date,?de).
 
 // Test of the above section
 abcInc:Company[].
@@ -104,5 +106,80 @@ payment_event:Event[
     date_of_event->"2020-11-04"^^\date
 ].
 
-on_or_about(?d1,?d2,\true) :-
+// This predicate can later be used to deal with
+// options other than the dates being identical.
+// This could be re-implemented as an additional
+// method on the \date object, too.
+on_or_about(?d1,?d2) :-
   ?d1 == ?d2.
+
+// 1 (a) Equity Financing
+//If there is an Equity Financing before the termination of this Safe, 
+//on the initial closing of such Equity Financing, this Safe will 
+//automatically convert into the number of shares of Safe Preferred Stock 
+//equal to the Purchase Amount divided by the Conversion Price.
+//
+
+
+// A safe termination is something that happens at a point in time, like
+// an event. So we model it as an Action, which can be applied to an Event.
+
+Safe_Termination::Action[|
+    safe->Safe
+    |].
+
+// An equity financing is also a thing that can happen "before" a termination
+// of a safe, but it need not happen instantaneously. It is an event with
+// a duration. There is an action of an initial closing
+// which relates to a termination, and has a specific time.
+
+Equity_Financing::Action[|
+    company->Company
+    |].
+
+Initial_Closing_of_Equity_Financing::Action[|
+    equity_financing_event->Event
+|].
+
+Safe_Preferred_Stock:Transferrable[
+    company->abcInc
+].
+
+//the company needs to provide shares in a certain amount
+\#:Obligation[
+    action->\#:Transfer[
+        transferor->?com,
+        transferee->?inv,
+        object->Safe_Preferred_Stock[company->?com],  //not sure about this modelling of transferrables.
+        quantity->?amount
+    ]
+]
+ :-
+    ?safe:Safe[company->?com,investor->?inv],
+    // Check here to see if the investor has been "issued" the right to certain shares?
+    ?equity_financing_event:Event[action->?_ef:Equity_Financing[company->?com]],
+    ( // either
+        \naf ?_ste[action->?_st:Safe_Termination[safe->?safe]] // the safe has not terminated
+    ) \or ( // it terminated, but after the equity event.
+        ?ste:Event[action->?_st:Safe_termination[safe->?safe]],
+        ?equity_financing_event[before(?ste)]
+    ),
+    ?amount \is 0.
+
+?o[before(?s)] :-
+  // One event is before another event if:
+  // The object start date plus its duration is before the subject start date.
+  ?o:Event[date_of_event->?odate,duration_of_event->?oduration],
+  ?s:Event[date_of_event->?sdate],
+  ?odate + ?oduration < ?sdate.
+
+// 1 (a) Equity Financing (continued)
+//In connection with the automatic conversion of this Safe into shares 
+//of Safe Preferred Stock, the Investor will execute and deliver to the 
+//Company all of the transaction documents related to the Equity Financing; 
+//provided, that such documents (i) are the same documents to be entered 
+//into with the purchasers of Standard Preferred Stock, with appropriate 
+//variations for the Safe Preferred Stock if applicable, and (ii) have 
+//customary exceptions to any drag-along applicable to the Investor, 
+//including (without limitation) limited representations, warranties, 
+//liability and indemnification obligations for the Investor.
