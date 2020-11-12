@@ -11,7 +11,8 @@ Safe[|
     date_of_safe=>\date,
     post_money_valuation_cap=>\currency,
     discount_rate=>\double,
-    purchase_amount=>\currency
+    purchase_amount=>\currency,
+    conversion_price=>\double
 |].
 
 Person[|
@@ -51,6 +52,7 @@ Transfer::Action[|
 rights_to_certain_shares:Transferable.
 
 Obligation[|
+    actor=>Person, //need a way to calculate the actor on the basis of the action, perhaps.
     action=>Action,
     satisfied=>\boolean,
     deadline=>\date
@@ -66,6 +68,7 @@ Obligation[|
 // THIS CERTIFIES THAT in exchange for the payment by [Investor Name] (the “Investor”) of $[_____________] (the “Purchase Amount”) on or about [Date of Safe], [Company Name], a [State of Incorporation] corporation (the “Company”), issues to the Investor the right to certain shares of the Company’s Capital Stock, subject to the terms described below. 
 
 \#:Obligation[
+    actor->?com,
     action->\#:Transfer[
         transferor->?com,
         transferee->?inv,
@@ -118,7 +121,6 @@ on_or_about(?d1,?d2) :-
 //on the initial closing of such Equity Financing, this Safe will 
 //automatically convert into the number of shares of Safe Preferred Stock 
 //equal to the Purchase Amount divided by the Conversion Price.
-//
 
 
 // A safe termination is something that happens at a point in time, like
@@ -134,37 +136,42 @@ Safe_Termination::Action[|
 // which relates to a termination, and has a specific time.
 
 Equity_Financing::Action[|
-    company->Company
+    company->Company,
+    related_documents->Transaction_Document
     |].
 
 Initial_Closing_of_Equity_Financing::Action[|
     equity_financing_event->Event
 |].
 
-Safe_Preferred_Stock:Transferrable[
-    company->abcInc
-].
-
 //the company needs to provide shares in a certain amount
 \#:Obligation[
+    actor->?com,
     action->\#:Transfer[
         transferor->?com,
         transferee->?inv,
-        object->Safe_Preferred_Stock[company->?com],  //not sure about this modelling of transferrables.
+        object->safe_preferred_stock,  //need to fix how this is modeled when the term is defined below.
         quantity->?amount
     ]
+],
+\#:Event[
+    action->\#:Automatic_Conversion_to_Safe_Preferred_Stock[
+        safe->?safe,
+        triggering_equity_financing_event->?equity_financing_event
+    ],
+    date_of_event->?termination_date
 ]
  :-
-    ?safe:Safe[company->?com,investor->?inv],
+    ?safe:Safe[company->?com,investor->?inv,purchase_amount->?pa,conversion_price->?cp],
     // Check here to see if the investor has been "issued" the right to certain shares?
     ?equity_financing_event:Event[action->?_ef:Equity_Financing[company->?com]],
     ( // either
-        \naf ?_ste[action->?_st:Safe_Termination[safe->?safe]] // the safe has not terminated
+        \naf ?_ste[date_of_event->?termination_date,action->?_st:Safe_Termination[safe->?safe]] // the safe has not terminated
     ) \or ( // it terminated, but after the equity event.
-        ?ste:Event[action->?_st:Safe_termination[safe->?safe]],
+        ?ste:Event[date_of_event->?termination_date,action->?_st:Safe_termination[safe->?safe]],
         ?equity_financing_event[before(?ste)]
     ),
-    ?amount \is 0.
+    ?amount \is ?pa / ?cp. // This likely needs a rounding.
 
 ?o[before(?s)] :-
   // One event is before another event if:
@@ -183,3 +190,102 @@ Safe_Preferred_Stock:Transferrable[
 //customary exceptions to any drag-along applicable to the Investor, 
 //including (without limitation) limited representations, warranties, 
 //liability and indemnification obligations for the Investor.
+
+// What this seems to say is that the investor is obliged to execute them and deliver
+// them as long as they meet the requirements. "Appropriate" and "customary" are
+// intentionally vague, so can be modeled as booleans. But it is not clear where
+// these documents come from, or who is required to determine that, or how they come
+// to exist. So we can model that as transaction documents being a thing that exist, that can be
+// delivered, and that can be signed, and that may or may not be "related to the
+// Equity Financing", as a relation to an equity financing. We can define that as
+// a property of the equity financing.
+// In connection with the automatic conversion seems to suggest a causal and perhaps temporal
+// relationship, but it isn't specific if the relationship is temporal. So we can say that the
+// obligations arise on the event of an automatic conversion, which means we need to model
+// the triggering of the previous section as something that generates an event.
+// It is also not clear what should happen if there are multiple related documents, but not
+// all of the documents meet the requirements. Is the obligation to sign all that are appropriate,
+// or to sign all if all are appropriate? The latter seems more likely, so we will model it that
+// way. We also presume that the obligation is to execute first, and deliver second.
+
+Automatic_Conversion_to_Safe_Preferred_Stock::Action[|
+  safe->Safe,
+  triggering_equity_financing_event->Event
+  |].
+
+Document[|
+  |].
+
+Document::Deliverable.
+
+Transaction_Document::Document[|
+  same_documents_as_for_purchasers_of_standard_preferred_stock=>\boolean,
+  have_customary_exceptions=>\boolean
+  |].
+
+Execute::Action[|
+    signor=>Person,
+    document=>Document
+|].
+
+Deliver::Action[|
+    sender=>Person,
+    recipient=>Person,
+    object=>Deliverable
+|].
+
+\#:Obligation[
+    actor->?investor,
+    action->\#:Execute[
+        signor->?investor,
+        document->?rd
+    ]
+],
+\#:Obligation[  // Currently, there is no model for the obligations to deliver it after it is signed.
+    actor->?investor,
+    action->\#:Deliver[
+        sender->?investor,
+        recipient->?company,
+        object->?rd
+    ]
+]
+:-
+  ?safe:Safe[investor->?investor,company->?company],
+  ?conversion:Event[action->?conversion_action:Automatic_Conversion_to_Safe_Preferred_Stock[
+      safe->?safe,
+      triggering_equity_financing_event->?efe[related_documents->?rd]]],
+  forall(?doc)^(?efe[action->?_[related_documents->?doc]] ~~> ?doc[
+      same_documents_as_for_purchasers_of_standard_preferred_stock->\true,
+      have_customary_exceptions->\true
+  ]).
+
+// “Conversion Price” means the either: (1) the Safe Price or (2) the Discount Price,
+// whichever calculation results in a greater number of shares of Safe Preferred Stock.
+//
+// N.B.: This definition makes conversation price dependent on the hypothetical results
+// for the greater number of shares of Safe Preferred Stock.
+
+// “Discount Price” means the price per share of the Standard Preferred Stock 
+// sold in the Equity Financing multiplied by the Discount Rate.
+
+// “Safe Price” means the price per share equal to the Post-Money Valuation Cap
+// divided by the Company Capitalization.
+
+// “Safe Preferred Stock” means the shares of the series of Preferred Stock 
+// issued to the Investor in an Equity Financing, having the identical rights, 
+// privileges, preferences and restrictions as the shares of Standard Preferred 
+// Stock, other than with respect to: (i) the per share liquidation preference 
+// and the initial conversion price for purposes of price-based anti-dilution 
+// protection, which will equal the Conversion Price; and (ii) the basis for any 
+// dividend rights, which will be based on the Conversion Price.
+
+// “Standard Preferred Stock” means the shares of the series of Preferred Stock 
+// issued to the investors investing new money in the Company in connection with 
+// the initial closing of the Equity Financing.
+
+// “Equity Financing” means a bona fide transaction or series of transactions with 
+// the principal purpose of raising capital, pursuant to which the Company issues 
+// and sells Preferred Stock at a fixed valuation, including but not limited to, 
+// a pre-money or post-money valuation.
+
+// NB Preferred Stock is not defined.
