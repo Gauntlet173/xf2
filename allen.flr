@@ -1,0 +1,602 @@
+:- compiler_options{expert=on}.
+
+Allen_Interval[|
+    allen_relationship(Allen_Interval)=>Allen_Relationship
+|].
+
+Allen_Basic_Relation[|
+  converse=>Allen_Basic_Relation,
+  composition(Allen_Basic_Relation)=>Allen_Relationship
+|].
+
+
+precedes:Allen_Basic_Relation[converse->preceded_by].
+preceded_by:Allen_Basic_Relation[converse->precedes].
+meets:Allen_Basic_Relation[converse->met_by].
+met_by:Allen_Basic_Relation[converse->meets].
+overlaps:Allen_Basic_Relation[converse->overlapped_by].
+overlapped_by:Allen_Basic_Relation[converse->overlaps].
+finishes:Allen_Basic_Relation[converse->finished_by].
+finished_by:Allen_Basic_Relation[converse->finishes].
+contains:Allen_Basic_Relation[converse->during].
+during:Allen_Basic_Relation[converse->contains].
+starts:Allen_Basic_Relation[converse->started_by].
+started_by:Allen_Basic_Relation[converse->starts].
+equal_to:Allen_Basic_Relation[converse->equal_to].
+
+Allen_Relationship[|
+    complement=>Allen_Relationship, // Gives a relationship with all the properties this one does not have.
+    converse=>Allen_Relationship, // Gives the relationship from interval2 to interval1.
+    composition(Allen_Relationship)=>Allen_Relationship, // if interval1 has relation A to interval2, and interval2 has relation B to interval3, gives relation between 1 and 3.
+    intersection(Allen_Relationship)=>Allen_Relationship, // similarities between relation A and B
+    union(Allen_Relationship)=>Allen_Relationship // combination of relation A and B
+|].
+
+Allen_Relationship[|
+  display=>void
+|].
+
+?x[display] :-
+  ?x:Allen_Relationship,
+  \if ?x[precedes] \then write('p')@\io,
+  \if ?x[preceded_by] \then write('P')@\io,
+  \if ?x[meets] \then write('m')@\io,
+  \if ?x[met_by] \then write('M')@\io,
+  \if ?x[overlaps] \then write('o')@\io,
+  \if ?x[overlapped_by] \then write('O')@\io,
+  \if ?x[finishes] \then write('f')@\io,
+  \if ?x[finished_by] \then write('F')@\io,
+  \if ?x[during] \then write('d')@\io,
+  \if ?x[contains] \then write('D')@\io,
+  \if ?x[starts] \then write('s')@\io,
+  \if ?x[started_by] \then write('S')@\io,
+  \if ?x[equal_to] \then write('e')@\io,
+  write('\n')@\io.
+
+// Each of the allen basic relationships may be true or false with regard to (are a boolean method of) an allen relationship
+Allen_Relationship[|=>?meth|] :-
+  ?meth:Allen_Basic_Relation.
+
+// There are only 27 Allen_Relationships that are the result of composing two basic
+// relationships, so I will set them out to simplify.
+ar(p):Allen_Relationship[
+    precedes
+].
+ar(P):Allen_Relationship[
+    preceded_by
+].
+ar(d):Allen_Relationship[
+    during
+].
+ar(D):Allen_Relationship[
+    contains
+].
+ar(oFD):Allen_Relationship[
+    overlaps,
+    finished_by,
+    contains
+].
+ar(osd):Allen_Relationship[
+    overlaps,
+    starts,
+    during
+].
+ar(dfO):Allen_Relationship[
+    during,
+    finishes,
+    overlapped_by
+].
+ar(DSO):Allen_Relationship[
+    contains,
+    started_by,
+    overlapped_by
+].
+ar(pmoFD):Allen_Relationship[
+    precedes,
+    contains,
+    overlaps,
+    finished_by,
+    meets
+].
+ar(pmosd):Allen_Relationship[
+    precedes,
+    during,
+    overlaps,
+    starts,
+    meets
+].
+ar(dfOMP):Allen_Relationship[
+    preceded_by,
+    during,
+    overlapped_by,
+    finishes,
+    met_by
+].
+ar(DSOMP):Allen_Relationship[
+    preceded_by,
+    contains,
+    overlapped_by,
+    started_by,
+    met_by
+].
+ar(m):Allen_Relationship[
+    meets
+].
+ar(M):Allen_Relationship[
+    met_by
+].
+ar(o):Allen_Relationship[
+    overlaps
+].
+ar(O):Allen_Relationship[
+    overlapped_by
+].
+ar(pmo):Allen_Relationship[
+    precedes,
+    overlaps,
+    meets
+].
+ar(OMP):Allen_Relationship[
+    preceded_by,
+    overlapped_by,
+    met_by
+].
+ar(s):Allen_Relationship[
+    starts
+].
+ar(S):Allen_Relationship[
+    started_by
+].
+ar(full):Allen_Relationship[
+    precedes,
+    preceded_by,
+    meets,
+    met_by,
+    overlaps,
+    overlapped_by,
+    finishes,
+    finished_by,
+    during,
+    contains,
+    starts,
+    started_by,
+    equal_to
+].
+ar(concur):Allen_Relationship[
+    overlaps,
+    overlapped_by,
+    finished_by,
+    finishes,
+    during,
+    contains,
+    starts,
+    started_by,
+    equal_to
+].
+ar(F):Allen_Relationship[
+    finished_by
+].
+ar(f):Allen_Relationship[
+    finishes
+].
+ar(Fef):Allen_Relationship[
+    equal_to,
+    finishes,
+    finished_by
+].
+ar(seS):Allen_Relationship[
+    equal_to,
+    starts,
+    started_by
+].
+ar(e):Allen_Relationship[
+    equal_to
+].
+
+// Now we can use those defined relationships as the results of the composition methods of the
+// basic relationships.
+precedes[composition(precedes)->ar(p)].
+precedes[composition(preceded_by)->ar(full)].
+precedes[composition(meets)->ar(p)].
+precedes[composition(met_by)->ar(pmosd)].
+precedes[composition(overlaps)->ar(p)].
+precedes[composition(overlapped_by)->ar(pmosd)].
+precedes[composition(finishes)->ar(pmosd)].
+precedes[composition(finished_by)->ar(p)].
+precedes[composition(contains)->ar(p)].
+precedes[composition(during)->ar(pmosd)].
+precedes[composition(starts)->ar(p)].
+precedes[composition(started_by)->ar(p)].
+precedes[composition(equal_to)->ar(p)].
+
+preceded_by[composition(precedes)->ar(full)].
+preceded_by[composition(preceded_by)->ar(P)].
+preceded_by[composition(meets)->ar(dfOMP)].
+preceded_by[composition(met_by)->ar(P)].
+preceded_by[composition(overlaps)->ar(dfOMP)].
+preceded_by[composition(overlapped_by)->ar(P)].
+preceded_by[composition(finishes)->ar(P)].
+preceded_by[composition(finished_by)->ar(P)].
+preceded_by[composition(contains)->ar(P)].
+preceded_by[composition(during)->ar(dfOMP)].
+preceded_by[composition(starts)->ar(dfOMP)].
+preceded_by[composition(started_by)->ar(P)].
+preceded_by[composition(equal_to)->ar(P)].
+
+meets[composition(precedes)->ar(p)].
+meets[composition(preceded_by)->ar(DSOMP)].
+meets[composition(meets)->ar(p)].
+meets[composition(met_by)->ar(Fef)].
+meets[composition(overlaps)->ar(p)].
+meets[composition(overlapped_by)->ar(osd)].
+meets[composition(finishes)->ar(osd)].
+meets[composition(finished_by)->ar(pmo)].
+meets[composition(contains)->ar(p)].
+meets[composition(during)->ar(osd)].
+meets[composition(starts)->ar(m)].
+meets[composition(started_by)->ar(m)].
+meets[composition(equal_to)->ar(m)].
+
+met_by[composition(precedes)->ar(pmoFD)].
+met_by[composition(preceded_by)->ar(P)].
+met_by[composition(meets)->ar(seS)].
+met_by[composition(met_by)->ar(P)].
+met_by[composition(overlaps)->ar(dfO)].
+met_by[composition(overlapped_by)->ar(P)].
+met_by[composition(finishes)->ar(M)].
+met_by[composition(finished_by)->ar(M)].
+met_by[composition(contains)->ar(P)].
+met_by[composition(during)->ar(dfO)].
+met_by[composition(starts)->ar(dfO)].
+met_by[composition(started_by)->ar(P)].
+met_by[composition(equal_to)->ar(M)].
+
+overlaps[composition(precedes)->ar(p)].
+overlaps[composition(preceded_by)->ar(DSOMP)].
+overlaps[composition(meets)->ar(p)].
+overlaps[composition(met_by)->ar(DSO)].
+overlaps[composition(overlaps)->ar(pmo)].
+overlaps[composition(overlapped_by)->ar(concur)].
+overlaps[composition(finishes)->ar(osd)].
+overlaps[composition(finished_by)->ar(pmoFD)].
+overlaps[composition(contains)->ar(pmoFD)].
+overlaps[composition(during)->ar(osd)].
+overlaps[composition(starts)->ar(o)].
+overlaps[composition(started_by)->ar(oFD)].
+overlaps[composition(equal_to)->ar(o)].
+
+overlapped_by[composition(precedes)->ar(pmoFD)].
+overlapped_by[composition(preceded_by)->ar(P)].
+overlapped_by[composition(meets)->ar(oFD)].
+overlapped_by[composition(met_by)->ar(P)].
+overlapped_by[composition(overlaps)->ar(concur)].
+overlapped_by[composition(overlapped_by)->ar(OMP)].
+overlapped_by[composition(finishes)->ar(O)].
+overlapped_by[composition(finished_by)->ar(DSO)].
+overlapped_by[composition(contains)->ar(DSOMP)].
+overlapped_by[composition(during)->ar(dfO)].
+overlapped_by[composition(starts)->ar(dfO)].
+overlapped_by[composition(started_by)->ar(OMP)].
+overlapped_by[composition(equal_to)->ar(O)].
+
+finishes[composition(precedes)->ar(p)].
+finishes[composition(preceded_by)->ar(P)].
+finishes[composition(meets)->ar(m)].
+finishes[composition(met_by)->ar(P)].
+finishes[composition(overlaps)->ar(osd)].
+finishes[composition(overlapped_by)->ar(OMP)].
+finishes[composition(finishes)->ar(f)].
+finishes[composition(finished_by)->ar(Fef)].
+finishes[composition(contains)->ar(DSOMP)].
+finishes[composition(during)->ar(d)].
+finishes[composition(starts)->ar(d)].
+finishes[composition(started_by)->ar(OMP)].
+finishes[composition(equal_to)->ar(f)].
+
+finished_by[composition(precedes)->ar(p)].
+finished_by[composition(preceded_by)->ar(DSOMP)].
+finished_by[composition(meets)->ar(m)].
+finished_by[composition(met_by)->ar(DSO)].
+finished_by[composition(overlaps)->ar(o)].
+finished_by[composition(overlapped_by)->ar(DSO)].
+finished_by[composition(finishes)->ar(Fef)].
+finished_by[composition(finished_by)->ar(F)].
+finished_by[composition(contains)->ar(D)].
+finished_by[composition(during)->ar(osd)].
+finished_by[composition(starts)->ar(o)].
+finished_by[composition(started_by)->ar(D)].
+finished_by[composition(equal_to)->ar(F)].
+
+contains[composition(precedes)->ar(pmoFD)].
+contains[composition(preceded_by)->ar(DSOMP)].
+contains[composition(meets)->ar(oFD)].
+contains[composition(met_by)->ar(DSO)].
+contains[composition(overlaps)->ar(oFD)].
+contains[composition(overlapped_by)->ar(DSO)].
+contains[composition(finishes)->ar(DSO)].
+contains[composition(finished_by)->ar(D)].
+contains[composition(contains)->ar(D)].
+contains[composition(during)->ar(concur)].
+contains[composition(starts)->ar(oFD)].
+contains[composition(started_by)->ar(D)].
+contains[composition(equal_to)->ar(D)].
+
+during[composition(precedes)->ar(p)].
+during[composition(preceded_by)->ar(P)].
+during[composition(meets)->ar(p)].
+during[composition(met_by)->ar(P)].
+during[composition(overlaps)->ar(pmosd)].
+during[composition(overlapped_by)->ar(dfOMP)].
+during[composition(finishes)->ar(d)].
+during[composition(finished_by)->ar(pmosd)].
+during[composition(contains)->ar(full)].
+during[composition(during)->ar(d)].
+during[composition(starts)->ar(d)].
+during[composition(started_by)->ar(dfOMP)].
+during[composition(equal_to)->ar(d)].
+
+starts[composition(precedes)->ar(p)].
+starts[composition(preceded_by)->ar(P)].
+starts[composition(meets)->ar(p)].
+starts[composition(met_by)->ar(M)].
+starts[composition(overlaps)->ar(pmo)].
+starts[composition(overlapped_by)->ar(dfO)].
+starts[composition(finishes)->ar(d)].
+starts[composition(finished_by)->ar(pmo)].
+starts[composition(contains)->ar(pmoFD)].
+starts[composition(during)->ar(d)].
+starts[composition(starts)->ar(s)].
+starts[composition(started_by)->ar(seS)].
+starts[composition(equal_to)->ar(s)].
+
+started_by[composition(precedes)->ar(pmoFD)].
+started_by[composition(preceded_by)->ar(P)].
+started_by[composition(meets)->ar(oFD)].
+started_by[composition(met_by)->ar(M)].
+started_by[composition(overlaps)->ar(oFD)].
+started_by[composition(overlapped_by)->ar(O)].
+started_by[composition(finishes)->ar(O)].
+started_by[composition(finished_by)->ar(D)].
+started_by[composition(contains)->ar(D)].
+started_by[composition(during)->ar(dfO)].
+started_by[composition(starts)->ar(seS)].
+started_by[composition(started_by)->ar(S)].
+started_by[composition(equal_to)->ar(S)].
+
+equal_to[composition(precedes)->ar(p)].
+equal_to[composition(preceded_by)->ar(P)].
+equal_to[composition(meets)->ar(m)].
+equal_to[composition(met_by)->ar(M)].
+equal_to[composition(overlaps)->ar(o)].
+equal_to[composition(overlapped_by)->ar(O)].
+equal_to[composition(finishes)->ar(f)].
+equal_to[composition(finished_by)->ar(F)].
+equal_to[composition(contains)->ar(D)].
+equal_to[composition(during)->ar(d)].
+equal_to[composition(starts)->ar(s)].
+equal_to[composition(started_by)->ar(S)].
+equal_to[composition(equal_to)->ar(e)].
+
+// a binary method is true of the complement if it is \naf of the relationship.
+?x[complement->complement(?x)[?meth]] :-
+  Allen_Relationship[|=>?meth|],
+  ?x:Allen_Relationship,
+  \naf ?x[?meth].
+
+// a binary method is true of the converse if the converse method is true of the relationship.
+?x[converse->converse(?x)[?cmeth]] :-
+  Allen_Relationship[|=>?meth[converse->?cmeth]|],
+  ?x:Allen_Relationship,
+  ?x[?meth].
+
+// A boolean method of an intersection is true if it is true of both parts.
+?x[intersection(?y)->intersection(?x,?y)[?meth]] :-
+  ?x:Allen_Relationship,
+  ?y:Allen_Relationship,
+  ?meth:Allen_Basic_Relation,
+  ?x[?meth],
+  ?y[?meth].
+
+// A boolean method of a union is true if it is true of either part.
+?x[union(?y)->union(?x,?y):Allen_Relationship[?meth]] :-
+  ?x:Allen_Relationship,
+  ?y:Allen_Relationship,
+  ?meth:Allen_Basic_Relation,
+  (
+      ?x[?meth]
+      ; //or
+      ?y[?meth]
+  ).
+
+// The composition of two allen relationships is the union of the compositions of the basic relations from each
+?x[compositions_of_basic_relations(?y)->?compositions] :-
+  ?x:Allen_Relationship,
+  ?_xmethods:Allen_Basic_Relation,
+  ?x[?_xmethods],
+  ?y:Allen_Relationship,
+  ?_ymethods:Allen_Basic_Relation,
+  ?y[?_ymethods],
+  ?_xmethods[composition(?_ymethods)->?compositions].
+// how do I union all of them on the basis of having a bunch, and a way to unify two?
+
+// If there is only one element in a list of compositions, return it.
+// If there is more than one element in the list of compositions, unify the tail, then unify it to the head.
+?x[composition(?y)->?z] :-
+  ?x:Allen_Relationship,
+  ?y:Allen_Relationship,
+  ?list = bagof{?comps|?x[compositions_of_basic_relations(?y)->?comps]},
+  unify_list_of_relations(?list,?z).
+
+unify_list_of_relations(?l,[]) :-
+  ?l == [].
+unify_list_of_relations(?l,?h) :-  
+  ?l = [?h|[]].
+
+unify_list_of_relations(?l,?out) :-
+  ?l = [?h|?tail],
+  unify_list_of_relations(?tail,?result),
+  ?h[union(?result)->?out].
+
+// We can find the strongest implied relation between two intervals by
+// examining all possible chains between them, compose those chains,
+// then take the intersection of them.
+// This involves finding all the possible routes from one interval to
+// another through the relationships.
+
+// An allen link is two specific intervals, and the relationship
+// between them.
+Allen_Link[|
+    from=>Allen_Interval,
+    to=>Allen_Interval,
+    relationship=>Allen_Relationship
+|].
+
+// A possible chain from one Interval to Another is:
+// A link from one interval to the other.
+// The converse of a link in the opposite direction.
+// A ordered list of links where the first is first, the last is
+// last, and each is connected to the next.
+Allen_Chain[|
+    from=>Allen_Interval,
+    to=>Allen_Interval,
+    links=>[Allen_Link]
+|].
+
+// May want to check for satisfiability of the set of intervals, by
+// checking to see if the intersection of the compositions of the routes
+// is empty.
+
+// Tests
+test1:Allen_Relationship[
+    meets,
+    overlapped_by,
+    during,
+    finished_by
+].
+
+test2:Allen_Relationship[
+    met_by,
+    overlapped_by
+].
+
+// John was not in the room, when I touched the light switch.
+// Either john was in the room before I touched the light switch,
+// or he was in the room until I touched the light switch,
+// or he came into the room when I touched the light switch,
+// or I touched the light switch before he came into the room.
+test3:Allen_Relationship[
+    precedes,
+    meets,
+    met_by,
+    preceded_by
+].
+
+// I touched the light switch, the light was on.
+// Either I touched the light switch as the light became on,
+// or I touched the light switch, and the light came one while
+// I was doing it.
+test4:Allen_Relationship[
+    meets,
+    overlaps
+].
+
+// The temporal relationship between john being in the room and
+// the light coming on can be calculated by the following query:
+// test3[composition(test4)->?_x[display]].
+// Which will return pPMOfdsSe, which means:
+// Either john was in the room until the light came on, or
+// the light was on before john was in the room, or
+// the light was on until john was in the room, or
+// john was in the room when the light finished being on, or
+// john was in the room while the light was on, or
+// john started being in the room when the light started being on, or
+// the light started being on when john was in the room, or,
+// the light was on and john was in the room for exactly the same interval.
+
+
+// Rock Paper Scissors Example
+game:Allen_Interval.
+players_count:Allen_Interval.
+player1_throws:Allen_Interval.
+player2_throws:Allen_Interval.
+player1_sees:Allen_Interval.
+player2_sees:Allen_Interval.
+
+l1:Allen_Link[
+    from->game,
+    to->players_count,
+    relationship->\#:Allen_Relationship[
+        contains,
+        started_by
+    ]
+].
+
+l2:Allen_Link[
+    from->game,
+    to->player1_throws,
+    relationship->\#:Allen_Relationship[
+        contains
+    ]
+].
+
+l3:Allen_Link[
+    from->game,
+    to->player2_throws,
+    relationship->\#:Allen_Relationship[
+        contains
+    ]
+].
+
+l4:Allen_Link[
+    from->game,
+    to->player1_sees,
+    relationship->\#:Allen_Relationship[
+        contains,
+        finished_by
+    ]
+].
+
+l5:Allen_Link[
+    from->game,
+    to->player2_sees,
+    relationship->\#:Allen_Relationship[
+        contains,
+        finished_by
+    ]
+].
+
+l6:Allen_Link[
+    from->player1_throws,
+    to->player2_sees,
+    relationship->\#:Allen_Relationship[
+        precedes,
+        meets
+    ]
+].
+
+l7:Allen_Link[
+    from->player2_throws,
+    to->player1_sees,
+    relationship->\#:Allen_Relationship[
+        precedes,
+        meets
+    ]
+].
+
+l8:Allen_Link[
+    from->players_count,
+    to->player1_throws,
+    relationship->\#:Allen_Relationship[
+        precedes,
+        meets
+    ]
+].
+
+l9:Allen_Link[
+    from->players_count,
+    to->player2_throws,
+    relationship->\#:Allen_Relationship[
+        precedes,
+        meets
+    ]
+].
