@@ -1,7 +1,16 @@
+// Allen.flr
+// An implementation of Allen Interval Algebra in Flora-2
+// Written by Jason Morris for the Singapore Management University Centre for Computational Law
+// Intended for educational and research purposes only.
+// Based on "Allen's Interval Algebra", Thomas A. Alspaugh, https://thomasalspaugh.org/pub/fnd/allen.html,
+// retrieved November 16, 2020. 
+
 :- compiler_options{expert=on}.
 
 Allen_Interval[|
-    allen_relationship(Allen_Interval)=>Allen_Relationship
+    allen_relationship(Allen_Interval)=>Allen_Relationship,
+    linked(Allen_Interval)=>Allen_Link, // not currently using.
+    strongest_implied_relationship(Allen_Interval)=>Allen_Relationship
 |].
 
 Allen_Basic_Relation[|
@@ -9,20 +18,19 @@ Allen_Basic_Relation[|
   composition(Allen_Basic_Relation)=>Allen_Relationship
 |].
 
-
-precedes:Allen_Basic_Relation[converse->preceded_by].
-preceded_by:Allen_Basic_Relation[converse->precedes].
-meets:Allen_Basic_Relation[converse->met_by].
-met_by:Allen_Basic_Relation[converse->meets].
-overlaps:Allen_Basic_Relation[converse->overlapped_by].
-overlapped_by:Allen_Basic_Relation[converse->overlaps].
-finishes:Allen_Basic_Relation[converse->finished_by].
-finished_by:Allen_Basic_Relation[converse->finishes].
-contains:Allen_Basic_Relation[converse->during].
-during:Allen_Basic_Relation[converse->contains].
-starts:Allen_Basic_Relation[converse->started_by].
-started_by:Allen_Basic_Relation[converse->starts].
-equal_to:Allen_Basic_Relation[converse->equal_to].
+precedes:Allen_Basic_Relation[converse_method->preceded_by].
+preceded_by:Allen_Basic_Relation[converse_method->precedes].
+meets:Allen_Basic_Relation[converse_method->met_by].
+met_by:Allen_Basic_Relation[converse_method->meets].
+overlaps:Allen_Basic_Relation[converse_method->overlapped_by].
+overlapped_by:Allen_Basic_Relation[converse_method->overlaps].
+finishes:Allen_Basic_Relation[converse_method->finished_by].
+finished_by:Allen_Basic_Relation[converse_method->finishes].
+contains:Allen_Basic_Relation[converse_method->during].
+during:Allen_Basic_Relation[converse_method->contains].
+starts:Allen_Basic_Relation[converse_method->started_by].
+started_by:Allen_Basic_Relation[converse_method->starts].
+equal_to:Allen_Basic_Relation[converse_method->equal_to].
 
 Allen_Relationship[|
     complement=>Allen_Relationship, // Gives a relationship with all the properties this one does not have.
@@ -32,11 +40,7 @@ Allen_Relationship[|
     union(Allen_Relationship)=>Allen_Relationship // combination of relation A and B
 |].
 
-Allen_Relationship[|
-  display=>void
-|].
-
-?x[display] :-
+?x[%display] :-
   ?x:Allen_Relationship,
   \if ?x[precedes] \then write('p')@\io,
   \if ?x[preceded_by] \then write('P')@\io,
@@ -58,7 +62,7 @@ Allen_Relationship[|=>?meth|] :-
   ?meth:Allen_Basic_Relation.
 
 // There are only 27 Allen_Relationships that are the result of composing two basic
-// relationships, so I will set them out to simplify.
+// relationships, so we set them out explicitly.
 ar(p):Allen_Relationship[
     precedes
 ].
@@ -378,19 +382,19 @@ equal_to[composition(started_by)->ar(S)].
 equal_to[composition(equal_to)->ar(e)].
 
 // a binary method is true of the complement if it is \naf of the relationship.
-?x[complement->complement(?x)[?meth]] :-
+?x[complement->complemento(?x):Allen_Relationship[?meth]] :-
   Allen_Relationship[|=>?meth|],
   ?x:Allen_Relationship,
   \naf ?x[?meth].
 
 // a binary method is true of the converse if the converse method is true of the relationship.
-?x[converse->converse(?x)[?cmeth]] :-
-  Allen_Relationship[|=>?meth[converse->?cmeth]|],
+?x[converse->converseo(?x):Allen_Relationship[?cmeth]] :-
+  Allen_Relationship[|=>?meth[converse_method->?cmeth]|],
   ?x:Allen_Relationship,
   ?x[?meth].
 
 // A boolean method of an intersection is true if it is true of both parts.
-?x[intersection(?y)->intersection(?x,?y)[?meth]] :-
+?x[intersection(?y)->intersectiono(?x,?y):Allen_Relationship[?meth]] :-
   ?x:Allen_Relationship,
   ?y:Allen_Relationship,
   ?meth:Allen_Basic_Relation,
@@ -398,7 +402,7 @@ equal_to[composition(equal_to)->ar(e)].
   ?y[?meth].
 
 // A boolean method of a union is true if it is true of either part.
-?x[union(?y)->union(?x,?y):Allen_Relationship[?meth]] :-
+?x[union(?y)->uniono(?x,?y):Allen_Relationship[?meth]] :-
   ?x:Allen_Relationship,
   ?y:Allen_Relationship,
   ?meth:Allen_Basic_Relation,
@@ -409,6 +413,14 @@ equal_to[composition(equal_to)->ar(e)].
   ).
 
 // The composition of two allen relationships is the union of the compositions of the basic relations from each
+?x[composition(?y)->?z] :-
+  ?x:Allen_Relationship,
+  ?y:Allen_Relationship,
+  ?list = bagof{?comps|?x[compositions_of_basic_relations(?y)->?comps]},
+  unify_list_of_relations(?list,?z).
+
+// The compositions of the basic relations of two allen relations is a cartesian composition of
+// each of the basic methods of one with each of the basic methods of the other
 ?x[compositions_of_basic_relations(?y)->?compositions] :-
   ?x:Allen_Relationship,
   ?_xmethods:Allen_Basic_Relation,
@@ -417,18 +429,12 @@ equal_to[composition(equal_to)->ar(e)].
   ?_ymethods:Allen_Basic_Relation,
   ?y[?_ymethods],
   ?_xmethods[composition(?_ymethods)->?compositions].
-// how do I union all of them on the basis of having a bunch, and a way to unify two?
 
-// If there is only one element in a list of compositions, return it.
-// If there is more than one element in the list of compositions, unify the tail, then unify it to the head.
-?x[composition(?y)->?z] :-
-  ?x:Allen_Relationship,
-  ?y:Allen_Relationship,
-  ?list = bagof{?comps|?x[compositions_of_basic_relations(?y)->?comps]},
-  unify_list_of_relations(?list,?z).
 
-unify_list_of_relations(?l,[]) :-
-  ?l == [].
+//unify_list_of_relations(?l,[]) :-
+//  ?l == [].
+
+// Union of a list of Allen Relations
 unify_list_of_relations(?l,?h) :-  
   ?l = [?h|[]].
 
@@ -437,11 +443,62 @@ unify_list_of_relations(?l,?out) :-
   unify_list_of_relations(?tail,?result),
   ?h[union(?result)->?out].
 
+
+// "Strongest implied relation" is the strongest thing we can say about
+// the temporal relationship between two intervals. If you want to know
+// whether one thing must necessarily happen prior to another, or during
+// another, you can determine that by analyzing the strongest implied
+// relation between them.
+//
 // We can find the strongest implied relation between two intervals by
 // examining all possible chains between them, compose those chains,
-// then take the intersection of them.
-// This involves finding all the possible routes from one interval to
-// another through the relationships.
+// then take the intersection of the compositions.
+?x[strongest_implied_relation(?y)->?z] :-
+  ?x:Allen_Interval,
+  ?y:Allen_Interval,
+  ?all_routes = bagof{?route|?x[reachable(?y)->?route]},
+  compose_list_of_routes(?all_routes,?composed_routes),
+  intersect_list_of_composed_routes(?composed_routes,?z).
+
+// Intersection of a list of Allen Relationships
+intersect_list_of_composed_routes(?l,?h) :-
+  ?l = [?h|[]].
+intersect_list_of_composed_routes(?l,?out) :-
+  ?l = [?h|?tail],
+  intersect_list_of_composed_routes(?tail,?result),
+  ?h[intersection(?result)->?out].
+
+// Mapping composition to a list of routes
+// Note that the routes will include links and reverse(link)s, and if the link is a reverse
+// then the converse of its relationship should be used.
+compose_list_of_routes(?l,[?o]) :-
+  ?l = [?h|[]],
+  compose_route(?h,?o).
+compose_list_of_routes(?l,[?o|?result]) :-
+  ?l = [?h|?tail],
+  compose_route(?h,?o),
+  compose_list_of_routes(?tail,?result).
+
+// Note that the algorithm for composing a list of routes does so even if the same composition
+// already exists in the output. By analogy, if the routes are ([1,4],[2,2]), it will return
+// ([4,4]), including the same product twice. If this is being used exclusively for finding
+// the strongest implied relation, the only remaining step is to intersect the list, so this
+// is redundant. Not sure if there is a way to speed the algorithm by avoiding duplicates,
+// but it might be something to look into.
+
+// Composing a route
+compose_route(?route,?rel) :-
+  ?route = [?h|[]],
+  \if ?h = reverse(?x)                          
+  \then ?x[relationship->?_[converse->?rel]]
+  \else ?h[relationship->?rel].
+compose_route(?r,?out) :-
+  ?r = [?h|?tail],
+  \if ?h = reverse(?x)
+  \then ?x[relationship->?_[converse->?rel]]
+  \else ?h[relationship->?rel],
+  compose_route(?tail,?result),
+  ?rel[composition(?result)->?out].
 
 // An allen link is two specific intervals, and the relationship
 // between them.
@@ -451,68 +508,134 @@ Allen_Link[|
     relationship=>Allen_Relationship
 |].
 
-// A possible chain from one Interval to Another is:
-// A link from one interval to the other.
-// The converse of a link in the opposite direction.
-// A ordered list of links where the first is first, the last is
-// last, and each is connected to the next.
-Allen_Chain[|
-    from=>Allen_Interval,
-    to=>Allen_Interval,
-    links=>[Allen_Link]
-|].
+// A utility version of the method so you don't have to provide an empty path,
+// and so that the resulting routes are in the right order.
+?a[reachable(?b)->?n2] :-
+  ?a:Allen_Interval,
+  ?b:Allen_Interval,
+  ?a[reachable(?b,[])->?_n],
+  ?_n[reverse->?n2]@\basetype.
 
-// May want to check for satisfiability of the set of intervals, by
-// checking to see if the intersection of the compositions of the routes
-// is empty.
+// An interval is reachable from another if it is directly connected.
+?a[reachable(?b,?_p)->[?l|?_p]] :-
+  ?a:Allen_Interval,
+  ?b:Allen_Interval,
+  ?l:Allen_Link[
+      from->?a,
+      to->?b
+  ].
+
+// An interval is also reachable from another if is connected in reverse.
+?a[reachable(?b,?_p)->[reverse(?l)|?_p]] :-
+  ?a:Allen_Interval,
+  ?b:Allen_Interval,
+  ?l:Allen_Link[
+      from->?b,
+      to->?a
+  ].
+
+// An interval is reachable from another if it is connected through a third
+// interval with a link not already in the path.
+?a[reachable(?b,?p)->?n] :-
+  ?a:Allen_Interval,
+  ?c:Allen_Interval,
+  ?l:Allen_Link[
+      from->?a,
+      to->?c
+  ],
+  ?c !== ?b, // or this would be direct link
+  \naf ?l \in ?p, // the list of links does not already include ?l or its reverse
+  \naf reverse(?l) \in ?p,
+  ?c[reachable(?b,[?l|?p])->?n]. // And you can get to b from c.
+
+// Similarly if the link is in the opposite direction.
+?a[reachable(?b,?p)->?n] :-
+  ?a:Allen_Interval,
+  ?c:Allen_Interval,
+  ?l:Allen_Link[
+      from->?c,
+      to->?a
+  ],
+  ?c !== ?b, // or this would be direct link
+  \naf ?l \in ?p, // the list of links does not already include ?l or its reverse
+  \naf reverse(?l) \in ?p,
+  ?c[reachable(?b,[reverse(?l)|?p])->?n]. // And you can get to b from c.
+
+// Note that the reachability algorithm is currently including sequences of edges that
+// pass through the same nodes. It will not follow the same bidirectional edge twice,
+// but it may go through a node twice if the node has four edges. I don't think that
+// negatively impacts the results, but it is likely suboptimal, since additional steps
+// cannot possibly strengthen the implied relationship.
+
+// Remaining To Do:
+// A predicate to determine if one Allen Relationship is stronger or weaker than another.
+// A test to see whether a system of Allen Intervals and Relationships is in the Horn
+// tractable set, and then use path-consistency algorithm for determining strongest
+// implied relation.
+// A satisfiability predicate, which finds the SIR between all intervals that do not
+// have a link, and determines if there are any null relationships, which indicates
+// an unsatisfiable network. This is a form of formal verification.
+// Need to look at integrating this with an event/action model, and determine if there
+// is a way to use it to discover "out of time" events.
 
 // Tests
-test1:Allen_Relationship[
-    meets,
-    overlapped_by,
-    during,
-    finished_by
+
+// "John was not in the room when I touched the switch to turn on the light."
+// This devolves to three intervals during which:
+// * John was in the room
+// * I touched the switch
+// * The light was on
+
+john_in_room:Allen_Interval.
+i_touch_switch:Allen_Interval.
+light_on:Allen_Interval.
+
+// We know the relationship between the first two, and the second two.
+
+// John being in the room and touching the switch did not happen
+// at the same time. So one either precedes, meets, is preceded_by, or met_by
+// the other, which are the four basic relationships in which the two intervals
+// do not overlap.
+john_to_switch:Allen_Link[
+    from->john_in_room,
+    to->i_touch_switch,
+    relationship->john_to_switch_rel:Allen_Relationship[
+        precedes,
+        meets,
+        met_by,
+        preceded_by
+    ]
 ].
 
-test2:Allen_Relationship[
-    met_by,
-    overlapped_by
+// "I touched the switch to turn on the light."
+// We know the light was off before I touched the switch.
+// We know touching the switch is connected to the light
+// coming on, with no pause between.
+// We know the light stayed on when I was done touching
+// the switch.
+// So touching the switch either meets or overlaps with
+// the light being on.
+switch_to_light:Allen_Link[
+    from->i_touch_switch,
+    to->light_on,
+    relationship->switch_to_light_rel:Allen_Relationship[
+        meets,
+        overlaps
+    ]
 ].
 
-// John was not in the room, when I touched the light switch.
-// Either john was in the room before I touched the light switch,
-// or he was in the room until I touched the light switch,
-// or he came into the room when I touched the light switch,
-// or I touched the light switch before he came into the room.
-test3:Allen_Relationship[
-    precedes,
-    meets,
-    met_by,
-    preceded_by
-].
+// Now we can display the strongest implied relationship
+// between john being in the room and the light being on
+// by issuing the following query:
+// ?- john_in_room[strongest_implied_relation(light_on)->?_[%display]].
 
-// I touched the light switch, the light was on.
-// Either I touched the light switch as the light became on,
-// or I touched the light switch, and the light came one while
-// I was doing it.
-test4:Allen_Relationship[
-    meets,
-    overlaps
-].
-
-// The temporal relationship between john being in the room and
-// the light coming on can be calculated by the following query:
-// test3[composition(test4)->?_x[display]].
-// Which will return pPMOfdsSe, which means:
-// Either john was in the room until the light came on, or
-// the light was on before john was in the room, or
-// the light was on until john was in the room, or
-// john was in the room when the light finished being on, or
-// john was in the room while the light was on, or
-// john started being in the room when the light started being on, or
-// the light started being on when john was in the room, or,
-// the light was on and john was in the room for exactly the same interval.
-
+// Which will display "pPMOfdsSe"
+// The excluded relationship are moFD
+// It is not possible that john being in the room was true up until the moment the light was on.
+// It is not possible that john being in the room began before and lasted until after the light being on started.
+// It is not possible that the light turned off at the same time that john was no longer in the room.
+// It is not possible that the light turned on and off while john stayed in the room.
+// All other temporal relationships are possible.
 
 // Rock Paper Scissors Example
 game:Allen_Interval.
@@ -525,7 +648,7 @@ player2_sees:Allen_Interval.
 l1:Allen_Link[
     from->game,
     to->players_count,
-    relationship->\#:Allen_Relationship[
+    relationship->l1rel:Allen_Relationship[
         contains,
         started_by
     ]
@@ -534,7 +657,7 @@ l1:Allen_Link[
 l2:Allen_Link[
     from->game,
     to->player1_throws,
-    relationship->\#:Allen_Relationship[
+    relationship->l2rel:Allen_Relationship[
         contains
     ]
 ].
@@ -542,7 +665,7 @@ l2:Allen_Link[
 l3:Allen_Link[
     from->game,
     to->player2_throws,
-    relationship->\#:Allen_Relationship[
+    relationship->l3rel:Allen_Relationship[
         contains
     ]
 ].
@@ -550,7 +673,7 @@ l3:Allen_Link[
 l4:Allen_Link[
     from->game,
     to->player1_sees,
-    relationship->\#:Allen_Relationship[
+    relationship->\l4rel:Allen_Relationship[
         contains,
         finished_by
     ]
@@ -559,7 +682,7 @@ l4:Allen_Link[
 l5:Allen_Link[
     from->game,
     to->player2_sees,
-    relationship->\#:Allen_Relationship[
+    relationship->l5rel:Allen_Relationship[
         contains,
         finished_by
     ]
@@ -568,7 +691,7 @@ l5:Allen_Link[
 l6:Allen_Link[
     from->player1_throws,
     to->player2_sees,
-    relationship->\#:Allen_Relationship[
+    relationship->l6rel:Allen_Relationship[
         precedes,
         meets
     ]
@@ -577,7 +700,7 @@ l6:Allen_Link[
 l7:Allen_Link[
     from->player2_throws,
     to->player1_sees,
-    relationship->\#:Allen_Relationship[
+    relationship->l7rel:Allen_Relationship[
         precedes,
         meets
     ]
@@ -586,7 +709,7 @@ l7:Allen_Link[
 l8:Allen_Link[
     from->players_count,
     to->player1_throws,
-    relationship->\#:Allen_Relationship[
+    relationship->l8rel:Allen_Relationship[
         precedes,
         meets
     ]
@@ -595,7 +718,7 @@ l8:Allen_Link[
 l9:Allen_Link[
     from->players_count,
     to->player2_throws,
-    relationship->\#:Allen_Relationship[
+    relationship->l9rel:Allen_Relationship[
         precedes,
         meets
     ]
