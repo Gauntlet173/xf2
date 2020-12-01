@@ -1,0 +1,578 @@
+// timepoints.flr
+// A library for temporal relations with uncertainty
+// Written by Jason Morris for the Singapore Management University Centre for Computational Law
+// Intended for educational and research purposes only.
+
+// TODO:
+// * Prune Reachability Tree
+//   Currently, the reachable predicate admits of far too many possible routes, including routes
+//   that loop back on themselves, and cannot therefore provide any additional information.
+//   Flora-2 can't even count the number of possible routes between two nodes in a seven-node
+//   network without exceeding a 12GB memory limit.
+// * Add Strongest Implied Before and Strongest Implied after
+//   These predicates should find the lowest concrete time that the TimePoint is certainly before,
+//   and the largest concrete time that the TimePoint is certainly after.
+//   These should be used to generate a range of possible values for the TimePoint.
+
+:- compiler_options{expert=on}.
+
+TimePoint::Thing.
+TimePointRelation::Thing[|
+    converse_relation=>TimePointRelation
+|].
+
+before:TimePointRelation[converse_relation->after].
+after:TimePointRelation[converse_relation->before].
+equal:TimePointRelation[converse_relation->equal].
+
+TimePointRelationSet::Thing[|
+  converse=>TimePointRelationSet,
+  complement=>TimePointRelationSet,
+  union(TimePointRelationSet)=>TimePointRelationSet,
+  intersect(TimePointRelationSet)=>TimePointRelationSet,
+  compose(TimePointRelationSet)=>TimePointRelationSet
+|].
+
+// This means that a TimePointRelationship has boolean methods before, after, and equal.
+TimePointRelationSet[|=>?rel|] :- ?rel:TimePointRelation.
+
+// This declares all of the possible time point relation sets.
+tpr(?r) :-
+  ?r \in ([[],[before],[before,after],[before,equal],[before,equal,after],[after],[equal,after],[equal]]).
+
+?x:TimePointRelationSet :-
+  ?x = tpr(?r),
+  ?r \in ([[],[before],[before,after],[before,equal],[before,equal,after],[after],[equal,after],[equal]]).
+
+// These connect the boolean methods to the set details.
+?x[before] :- ?x:TimePointRelationSet, ?x = tpr(?_r), before \in ?_r.
+?x[after] :- ?x:TimePointRelationSet, ?x = tpr(?_r), after \in ?_r.
+?x[equal] :- ?x:TimePointRelationSet, ?x = tpr(?_r), equal \in ?_r.
+
+// This will display (bea) or some subset as a shorthand to dispaly a Time Point Relation Set.
+?x[%display] :-
+  ?x:TimePointRelationSet,
+  write('(')@\io,
+  \if ?x[before] \then write('b')@\io,
+  \if ?x[equal] \then write('e')@\io,
+  \if ?x[after] \then write('a')@\io,
+  write(')\n')@\io.
+
+// a binary method (before, equal, or after) is true of the complement if it is \naf of the timepointrelationshipset.
+?x[complement->complemento(?x):TimePointRelationSet[?meth]] :-
+  TimePointRelationSet[|=>?meth|],
+  ?x:TimePointRelationSet,
+  \naf ?x[?meth].
+
+// Converses of the Time Point Relation Sets are set out explicitly.
+tpr([])[converse->tpr([])].
+tpr([before])[converse->tpr([after])].
+tpr([equal])[converse->tpr([equal])].
+tpr([after])[converse->tpr([before])].
+tpr([before,equal])[converse->tpr([equal,after])].
+tpr([equal,after])[converse->tpr([before,equal])].
+tpr([before,after])[converse->tpr([before,after])].
+tpr([before,equal,after])[converse->tpr([before,equal,after])].
+
+
+// This indicates whether two time point relation sets intersect.
+intersect(?x,?y) :-
+  ?x:TimePointRelationSet,
+  ?y:TimePointRelationSet,
+  ?meth:TimePointRelation,
+  ?x[?meth],
+  ?y[?meth].
+
+// A boolean method of an intersection is true if it is true of both parts.
+?x[intersection(?y)->intersectiono(?x,?y):TimePointRelationSet[?meth]] :-
+  ?x:TimePointRelationSet,
+  ?y:TimePointRelationSet,
+  ?meth:TimePointRelation,
+  ?x[?meth],
+  ?y[?meth].
+
+// If two tpr sets do not intersect, their intersection is the empty set.
+?x[intersection(?y)->tpr([])] :-
+  ?x:TimePointRelationSet,
+  ?y:TimePointRelationSet,
+  \naf intersect(?x,?y).
+
+// Setting out the union of two tprs.
+?x[union(?y)->uniono(?x,?y):TimePointRelationSet[?meth]] :-
+  ?x:TimePointRelationSet,
+  ?y:TimePointRelationSet,
+  ?meth:TimePointRelation,
+  (
+      ?x[?meth]
+      ; //or
+      ?y[?meth]
+  ).
+
+// Composition of TimePointRelationSets
+
+// Composing an empty relation set with anything returns an empty relation set.
+tpr([])[composition(?_)->tpr([])].
+tpr(?_)[composition(tpr([]))->tpr([])].
+
+// Composing a relation set with itself returns itself.
+tpr(?_x)[composition(tpr(?_x))->tpr(?_x)].
+
+// Composing a relation set with equal returns the original.
+tpr([equal])[composition(?_x)->?_x].
+tpr(?_x)[composition(tpr([equal]))->tpr(?_x)].
+
+// Composing a relation set with unknown returns unknown
+tpr(?_)[composition(tpr([before,equal,after]))->tpr([before,equal,after])].
+tpr([before,equal,after])[composition(?_)->tpr([before,equal,after])].
+
+// Other Compositions
+tpr([before])[composition(tpr([after]))->tpr([before,equal,after])].
+tpr([before])[composition(tpr([before,equal]))->tpr([before])].
+tpr([before])[composition(tpr([before,after]))->tpr([before,equal,after])].
+tpr([before])[composition(tpr([equal,after]))->tpr([before,equal,after])].
+
+tpr([after])[composition(tpr([before]))->tpr([before,equal,after])].
+tpr([after])[composition(tpr([before,equal]))->tpr([before,equal,after])].
+tpr([after])[composition(tpr([before,after]))->tpr([before,equal,after])].
+tpr([after])[composition(tpr([equal,after]))->tpr([after])].
+
+tpr([before,equal])[composition(tpr([before]))->tpr([before])].
+tpr([before,equal])[composition(tpr([after]))->tpr([before,equal,after])].
+tpr([before,equal])[composition(tpr([before,after]))->tpr([before,equal,after])].
+tpr([before,equal])[composition(tpr([equal,after]))->tpr([before,equal,after])].
+
+tpr([before,after])[composition(tpr([before]))->tpr([before,equal,after])].
+tpr([before,after])[composition(tpr([after]))->tpr([before,equal,after])].
+tpr([before,after])[composition(tpr([before,equal]))->tpr([before,equal,after])].
+tpr([before,after])[composition(tpr([equal,after]))->tpr([before,equal,after])].
+
+tpr([equal,after])[composition(tpr([before]))->tpr([before,equal,after])].
+tpr([equal,after])[composition(tpr([after]))->tpr([after])].
+tpr([equal,after])[composition(tpr([before,equal]))->tpr([before,equal,after])].
+tpr([equal,after])[composition(tpr([before,after]))->tpr([before,equal,after])].
+
+// An IntervalRelation is two timepoints and the timepointrelationset that
+// applies between them.
+IntervalRelation[|
+    from=>TimePoint,
+    to=>TimePoint,
+    relationship=>TimePointRelationSet
+|].
+
+
+// Reachable returns the routes (list of IntervalRelations) by which you
+// can reach one TimePoint from another.
+
+// A utility version of the method so you don't have to provide an empty path,
+// and so that the resulting routes are in the right order.
+// It is modified to require that timepoints be in the same network.
+?x[reachable(?a,?b)->?n2] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a:TimePoint,
+  ?b:TimePoint,
+  ?x[reachable(?a,?b,[])->?_n],
+  ?_n[reverse->?n2]@\basetype.
+
+// A timepoint is reachable from another if it is directly connected by an IntervalRelation 
+// It is modified to require that the timepoints and Intervals be in the same network.
+?x[reachable(?a,?b,?_p)->[?l|?_p]] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a:TimePoint,
+  ?b:TimePoint,
+  ?x[interval->?l],
+  ?l:IntervalRelation[
+      from->?a,
+      to->?b
+  ].
+
+// A timepoint is also reachable from another if is connected in reverse.
+?x[reachable(?a,?b,?_p)->[reverse(?l)|?_p]] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a:TimePoint,
+  ?b:TimePoint,
+  ?x[interval->?l],
+  ?l:IntervalRelation[
+      from->?b,
+      to->?a
+  ].
+
+// A timepoint is reachable from another if it is connected through a third
+// timepoint with an IntervalRelation not already in the path.
+?x[reachable(?a,?b,?p)->?n] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a:TimePoint,
+  ?c:TimePoint,
+  ?x[interval->?l],
+  ?l:IntervalRelation[
+      from->?a,
+      to->?c
+  ],
+  ?c !== ?b, // or this would be direct link
+  \naf ?l \in ?p, // the list of links does not already include ?l or its reverse
+  \naf ?p[to->?c], // the route does not already go through this destination node
+  \naf reverse(?l) \in ?p,
+  ?x[reachable(?c,?b,[?l|?p])->?n]. // And you can get to b from c.
+
+// Similarly if the link is in the opposite direction.
+?x[reachable(?a,?b,?p)->?n] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a:TimePoint,
+  ?c:TimePoint,
+  ?x[interval->?l],
+  ?l:IntervalRelation[
+      from->?c,
+      to->?a
+  ],
+  ?c !== ?b, // or this would be direct link
+  \naf ?l \in ?p, // the list of links does not already include ?l or its reverse
+  \naf ?p[to->?a], // the route does not already go through this destination node
+  \naf reverse(?l) \in ?p,
+  ?x[reachable(?c,?b,[reverse(?l)|?p])->?n]. // And you can get to b from c.
+
+// Composing the TimePointRelationSets in a Route.
+compose_route(?route,?rel) :-
+  ?route = [?h|[]],
+  \if ?h = reverse(?x)                          
+  \then ?x[relationship->?_[converse->?rel]]
+  \else ?h[relationship->?rel].
+compose_route(?r,?out) :-
+  ?r = [?h|?tail],
+  \if ?h = reverse(?x)
+  \then ?x[relationship->?_[converse->?rel]]
+  \else ?h[relationship->?rel],
+  compose_route(?tail,?result),
+  ?rel[composition(?result)->?out].
+
+// Compose each of a list of routes and return a list of composed routes.
+compose_list_of_routes(?l,[?o]) :-
+  ?l = [?h|[]],
+  compose_route(?h,?o).
+compose_list_of_routes(?l,[?o|?result]) :-
+  ?l = [?h|?tail],
+  compose_route(?h,?o),
+  compose_list_of_routes(?tail,?result).
+
+// When we have a list of composed routes, intersect them.
+intersect_list_of_composed_routes(?l,?h) :-
+  ?l = [?h|[]].
+intersect_list_of_composed_routes(?l,?out) :-
+  ?l = [?h|?tail],
+  intersect_list_of_composed_routes(?tail,?result),
+  ?h[intersection(?result)->?out].
+
+// The strongest implied relation (SIR) between two timepoints
+// is the most we can say about their relationship.
+// This is modified to use only details from the same network.
+?net[sir(?a,?b)->?z] :-
+  ?net:TimePointNet,
+  ?net[point->?a],
+  ?net[point->?b],
+  ?a:TimePoint,
+  ?b:TimePoint,
+  ?all_routes = bagof{?route|?net[reachable(?a,?b)->?route]},
+  compose_list_of_routes(?all_routes,?composed_routes),
+  intersect_list_of_composed_routes(?composed_routes,?z).
+
+TimePointNet[|
+    point=>TimePoint,
+    interval=>IntervalRelation,
+    =>invalid,
+    completion=>ConcreteTimePointNet,
+    sir(TimePoint,TimePoint)=>TimePointRelation,
+    reachable(TimePoint,TimePoint)=>[IntervalRelation]
+|].
+
+// A collection of timepoints and their IntervalRelations is invalid if
+// there is a pair of timepoints in that network for which the strongest implied
+// relation is empty.
+?x[invalid] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a!=?b,
+  ?x[sir(?a,?b)->tpr([])].
+
+?x[valid] :-
+  \naf ?x[invalid].
+
+
+tpr([before]):ConcreteTimePointRelation.
+tpr([equal]):ConcreteTimePointRelation.
+tpr([after]):ConcreteTimePointRelation.
+
+
+// This is the list of edges that a completion will need to add to the existing network.
+?x[edge->edge(?a,?b)] :-
+  ?x:TimePointNet,
+  ?edges = setof{?ordered_pair|
+    ?x[point->?a],
+    ?x[point->?b],
+    ?a != ?b,
+    ?_pair = [?a,?b],
+    ?ordered_pair = setof {?item|?item \in ?_pair}
+  },
+  [?a,?b] \in ?edges,
+  \naf ?x[interval->?_i[from->?a,to->?b]],
+  \naf ?x[interval->?_i[from->?b,to->?a]].
+
+
+// This predicate just returns every permutation of ConcreteTimePointRelations
+// for a list with the length of ?list.
+option(?list,?output) :-
+  ?list = [?_h|[]],
+  ?_rel:ConcreteTimePointRelation,
+  ?output = [?_rel].
+
+option(?list,?output) :-
+  ?list = [?_h|?t],
+  option(?t,?result),
+  ?_rel:ConcreteTimePointRelation,
+  ?output = [?_rel|?result].
+
+// A TimePointNet has a completion for each possible permutation of concrete relations
+// over all of its edges, which is a TimePointNet.
+?x[completion->completion(?x,?edges,?relations):TimePointNet] :-
+  ?x:TimePointNet,
+  ?x != completion(?_,?_,?_), // to avoid infinite loops.
+  ?edges = setof{?edge|?x[edge->?edge]},
+  option(?edges,?relations).
+
+// This creates the intervals in the network completions.
+completion(?x,?edges,?relations)[interval->interval(?x,?y,?edge,?rel):IntervalRelation[from->?a,to->?b,relationship->?rel]] :-
+  ?x:TimePointNet,
+  ?x[completion->?y],
+  ?y = completion(?x,?edges,?relations),
+  ?edges[ith(?index)->?edge]@\basetype,
+  ?relations[ith(?index)->?rel]@\basetype,
+  ?edge = edge(?a,?b).
+
+// Every point in a TimePointNet is also a point in a completion of that TimePointNet.
+// This is required to be able to use the methods available in TimePointNet inside
+// a completion.
+completion(?z,?_,?_)[point->?y] :-
+  ?z:TimePointNet,
+  ?z[completion->?x],
+  ?x = completion(?z,?_,?_),
+  ?z[point->?y].
+
+// Every interval in a timepointnet is also an interval in every completion of the timepointnet.
+?x[interval->?y] :-
+  ?z:TimePointNet[completion->?x, interval->?y],
+  ?x = completion(?z,?_,?_).
+
+// When you add a datetime to an object, that datetime can contain
+// specific information about time, allowing the relationships to be
+// derived, or it can contain relative information about time.
+
+// A timepoint, therefore, must have the ability to hold specific information.
+// Say, for the sake of argument, a datetime.
+// If there is a datetime, the relationship between it and another timepoint with
+// a specific datetime can be inferred.
+
+TimePoint[|
+    at=>\dateTime
+|].
+
+// A timepoint is at the same time as another timepoint it is equal to which has a set time.
+?y[at->?z_at] :-
+  ?x:TimePointNet,
+  ?x[point->?y:TimePoint],
+  ?x[interval->?i[from->?y,to->?z[at->?z_at],relationship->tpr([equal])]].
+
+?x[interval->interval_concrete(?a,?b,before):IntervalRelation[from->?a,to->?b,relationship->tpr([before])]] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a!=?b,
+  ?a:TimePoint[at->?a_at],
+  ?b:TimePoint[at->?b_at],
+  ?a_at[lessThan(?b_at)]@\basetype.
+
+?x[interval->interval_concrete(?h,?t,equal):IntervalRelation[from->?a,to->?b,relationship->tpr([equal])]] :-
+  ?x:TimePointNet,
+  ?x[point->?a],
+  ?x[point->?b],
+  ?a!=?b,
+  ?a:TimePoint[at->?a_at],
+  ?b:TimePoint[at->?b_at],
+  ?a_at[equals(?b_at)]@\basetype,
+  ?list = setof{?z|?z \in [?a,?b]}, // These lines prevent redundant equals relationships
+  ?list = [?h|[?t|[]]].
+
+// Strongest Implied Before
+// This should return the concrete datetime which this TimePoint is before, and is the lowest.
+?x[sib(?y)->?min] :-
+  ?x:TimePointNet,
+  ?x[point->?y],
+  ?x[point->?z],
+  ?y!=?z,
+  ?x[sir(?y,?z)->?rel], // This line is generating errors for exceeding maximum table size.
+  ?rel[before],
+  \naf ?rel[equal],
+  \naf ?rel[after],
+  ?min = min{?z_at|?z[at->?z_at]}.
+
+// Tests
+
+{a,b,c}:TimePoint.
+atob:IntervalRelation[from->a,to->b,relationship->tpr([before])].
+ctob:IntervalRelation[from->c,to->b,relationship->tpr([after])].
+atoc:IntervalRelation[from->a,to->c,relationship->tpr([before])].
+
+{a1,b1,c1}:TimePoint. // This set is supposed to be invalid.
+a1tob1:IntervalRelation[from->a1,to->b1,relationship->tpr([before])].
+b1toc1:IntervalRelation[from->b1,to->c1,relationship->tpr([before])].
+c1toa1:IntervalRelation[from->c1,to->a1,relationship->tpr([before])].
+
+net:TimePointNet[point->{a,b,c},interval->{atob,ctob,atoc}].
+net1:TimePointNet[point->{a1,b1,c1},interval->{a1tob1,b1toc1,c1toa1}].
+
+{l,m,n}:TimePoint.
+net2:TimePointNet[point->{l,m,n}].
+
+// An Allen interval is an interval relation with the relationship 'before'.
+// An Allen Relation is between two Allen Intervals
+// The basic allen interval relations for Allen Relations are all the possible
+// relationships between the timepoints in two allen intervals (the set of 13).
+
+{A,B,C,D}:TimePoint.
+AllenIntervals:TimePointNet[point->{A,B,C,D},interval->{AtoB,CtoD}].
+AtoB:IntervalRelation[from->A,to->B,relationship->tpr([before])].
+CtoD:IntervalRelation[from->C,to->D,relationship->tpr([before])].
+
+// You can find the 13 basic allen relationships by running this query:
+// AllenIntervals[completion->?_x[valid]].
+
+// Rock Paper Scissors Example
+// A game of rock paper scissors consists of a number of points in time.
+// For example, we can define 7:
+// * The game starts
+// * The players count
+// * Player 1 Shoots
+// * Player 2 Shoots
+// * Player 1 Sees what Player 2 Shot
+// * Player 2 Sees what Player 1 Shot
+// * The game ends.
+// We can set those out as TimePoints, like this.
+
+{Game_Starts, Players_Count, Player1_Shoots, Player2_Shoots, Player1_Sees, Player2_Sees, Game_Ends}:TimePoint.
+
+// We also know some of the temporal relationship between the timepoints.
+
+// The players count at the same time or after the game starts.
+PCafterGS:IntervalRelation[
+    from->Players_Count,
+    to->Game_Starts,
+    relationship->tpr([equal,after])
+].
+
+// Player 1 shoots after the players count.
+P1afterPC:IntervalRelation[
+    from->Player1_Shoots,
+    to->Players_Count,
+    relationship->tpr([after])
+].
+
+// Player 2 shoots after the players count.
+P2afterPC:IntervalRelation[
+    from->Player2_Shoots,
+    to->Players_Count,
+    relationship->tpr([after])
+].
+
+// Player 1 sees after player 2 shoots.
+P1SafterP2:IntervalRelation[
+    from->Player1_Sees,
+    to->Player2_Shoots,
+    relationship->tpr([after])
+].
+
+// Player 2 sees after player 1 shoots.
+P2SafterP1:IntervalRelation[
+    from->Player2_Sees,
+    to->Player1_Shoots,
+    relationship->tpr([after])
+].
+
+// Player 1 shoots before, or at the same time, as they see what player 2 shot.
+P1beforeP1S:IntervalRelation[
+    from->Player1_Shoots,
+    to->Player1_Sees,
+    relationship->tpr([before,equal])
+].
+
+// Player 2 shoots before, or at the same time, as they see what player 1 shot.
+P2beforeP2S:IntervalRelation[
+    from->Player2_Shoots,
+    to->Player2_Sees,
+    relationship->tpr([before,equal])
+].
+
+// Player 2 sees before the game is over.
+P2SbeforeGE:IntervalRelation[
+    from->Player2_Sees,
+    to->Game_Ends,
+    relationship->tpr([before])
+].
+
+// Player 1 sees before the game is over.
+P1SbeforeGE:IntervalRelation[
+    from->Player1_Sees,
+    to->Game_Ends,
+    relationship->tpr([before])
+].
+
+// Now we can indicate that these points and intervals are part of a Time Point Network
+rps:TimePointNet[
+    point->{Game_Starts, Players_Count, Player1_Shoots, Player2_Shoots, Player1_Sees, Player2_Sees, Game_Ends},
+    interval->{
+        PCafterGS,
+        P1afterPC,
+        P2afterPC,
+        P1SafterP2,
+        P2SafterP1,
+        P1beforeP1S,
+        P2beforeP2S,
+        P2SbeforeGE,
+        P1SbeforeGE
+    }
+].
+
+// We can then ask questions like "What are the possible relationships between Player 2 seeing player 1's throw and the end of the game?
+// rps[sir(Player2_Sees,Game_Ends)->?_x[%display]].
+// which will return (b)
+
+
+dob:TimePoint[at->"2000-01-01"^^\dateTime].
+dod:TimePoint[at->"2020-01-01"^^\dateTime].
+dob2:TimePoint[at->"2000-01-01"^^\dateTime].
+test:TimePoint.
+testtodod:IntervalRelation[from->test,to->dod,relationship->tpr([equal])].
+middle:TimePoint.
+mtodob:IntervalRelation[from->middle,to->dob,relationship->tpr([after])].
+mtodod:IntervalRelation[from->middle,to->dod,relationship->tpr([before])].
+datenet:TimePointNet[point->{dob,dod,dob2,test,middle},interval->{testtodod,mtodod,mtodob}].
+// it should be inferred that dob is before dod, dob2 is before dod, and dob and dob2 are equal.
+// it should be inferred that test is equal to dod, and that dob and dob2 are before test.
+// it should be inferred that middle is before dod and dob is before middle.
+// That should be the strongest inferred concrete relationship in either direction.
+// the strongest implied before, and the strongest implied after.
+
+// Next it should be possible to determine the most specific relative value present in each direction.
+// If it is equal to anything, show what it is equal to.
+// If it is not equal to anything, show the closest thing it is before and the closest thing before it.
+// These should all be a single predicate, if possible, called range, that gives the highest and lowest
+// value, and whether or not they are inclusive.
+
+// Later, it should be possible to use durations and add or subtract them from timePoints,
+// so we can say things like "three days before the signing". 
