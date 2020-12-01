@@ -1,0 +1,274 @@
+// event.flr
+// An implementation of continuous event calculus in Flora-2 based on 
+// Erik T. Mueller. Commonsense Reasoning. Morgan Kaufmann, 2006.
+// By Jason Morris on behalf of Singapore Management University Centre
+// for Computational Law.
+// Intended for research and teaching purposes only.
+
+Event::Thing.
+
+Event[|
+    =>happens(TimePoint),
+    =>initiates(Fluent,TimePoint),
+    =>terminates(Fluent,TimePoint),
+    =>releases(Fluent,TimePoint)
+|].
+
+Fluent::Thing.
+
+Fluent[|
+    =>holdsAt(TimePoint),
+    =>releasedAt(TimePoint),
+    =>trajectory(TimePoint,Fluent,TimePoint),
+    =>antiTrajectory(TimePoint,Fluent,TimePoint),
+    =>clipped(TimePoint,TimePoint),
+    =>declipped(TimePoint,TimePoint),
+    =>startedIn(TimePoint,TimePoint),
+    =>stoppedIn(TimePoint,TimePoint),
+    =>persistsBetween(TimePoint,TimePoint),
+    =>releasedBetween(TimePoint,TimePoint)
+|].
+
+//TimePoint::\real. // TODO: This causes a run-time warning, and is ignored.
+
+// Definition EC1:
+// A fluent is clipped between timepoints t1 and t2 if and only if
+// the fluent is terminated by some event that occurs at or after t1
+// and before t2.
+?x[clipped(?t1,?t2)] :-
+  ?x:Fluent,
+  ?e:Event,
+  ?e[terminates(?x,?et)],
+  ?e[happens(?et)],
+  ?et >= ?t1,
+  ?et < ?t2.
+
+// Definition EC2:
+// A fluent is declipped between timepoints t1 and t2 if and only if
+// the fluent is initiated by some event that occurs at or after t1
+// and before t2.
+?x[declipped(?t1,?t2)] :-
+  ?x:Fluent,
+  ?e:Event,
+  ?e[initiates(?x,?et)],
+  ?e[happens(?et)],
+  ?et >= ?t1,
+  ?et < ?t2.
+
+// Definition EC3:
+// A fluent is stopped between timepoints t1 and t2 if and only if
+// the fluent is terminated by some event that occurs after t1 and
+// before t2.
+?x[stoppedIn(?t1,?t2)] :-
+  ?x:Fluent,
+  ?e:Event,
+  ?e[terminates(?x,?et)],
+  ?e[happens(?et)],
+  ?et > ?t1,
+  ?et < ?t2.
+
+// Definition EC4:
+// A fluent is started between timepoints t1 and t2 if and only if
+// the fluent is initiated by some event that occurs after t1
+// and before t2.
+?x[startedIn(?t1,?t2)] :-
+  ?x:Fluent,
+  ?e:Event,
+  ?e[initiates(?x,?et)],
+  ?e[happens(?et)],
+  ?et > ?t1,
+  ?et < ?t2.
+
+// Axiom EC5:
+// If there is a trajectory with t2>0, f1 is initiated at t1, and f1
+// is not stopped between t and t1+t2, f2 is true at t1+t2.
+?f2[holdsAt(?later)] :-
+  ?e:Event,
+  ?e[happens(?t1)],
+  ?e[initiates(?f1,?t1)],
+  ?f1[trajectory(?t1,?f2,?t2)],
+  ?t2>0,
+  ?later = ?t1 + ?t2,
+  \naf ?f1[stoppedIn(?t1,?later)].
+
+// Axiom EC6:
+// If there is an antitrajectory with t2>0, f1 is terminated at t1, and f1
+// is not stopped between t and t1+t2, f2 is true at t1+t2.
+?f2[holdsAt(?later)] :-
+  ?e:Event,
+  ?e[happens(?t1)],
+  ?e[terminates(?f1,?t1)],
+  ?f1[antiTrajectory(?t1,?f2,?t2)],
+  ?t2>0,
+  ?later = ?t1 + ?t2,
+  \naf ?f1[startedIn(?t1,?later)].
+
+// Definition EC7:
+// A fluent persists between t1 and t2 if and only if the fluent is
+// not released after t1 and at or before t2.
+?f[persistsBetween(?t1,?t2)] :-
+  ?f:Fluent,
+  \naf (
+      ?f[releasedAt(?t)],
+      ?t > ?t1,
+      ?t =< ?t2
+  ).
+
+// Definition EC7:
+// A fluent is released between t1 and t2 if and only if the fluent is
+// released at or after t1 and before t2.
+?f[releasedBetween(?t1,?t2)] :-
+    ?f:Fluent,
+    ?e:Event,
+    ?e[happens(?t)],
+    ?e[releases(?f,?t)],
+    ?t >= ?t1,
+    ?t < ?t2.
+
+// Axiom EC9:
+// If a fluent is true at t1, persists, and is not clipped between t1 and t2,
+// it is true at t2.
+?f[holdsAt(?t2)] :-
+  ?f:Fluent,
+  ?f[holdsAt(?t1)],
+  ?f[persistsBetween(?t1,?t2)],
+  \naf ?f[clipped(?t1,?t2)].
+
+// Axiom EC10:
+// If a fluent is false at t1, persists, and is not declipped between t1 and t2,
+// it is false at t2.
+\neg ?f[holdsAt(?t2)] :-
+  ?f:Fluent,
+  \naf ?f[holdsAt(?t1)],
+  ?f[persistsBetween(?t1,?t2)],
+  \naf ?f[declipped(?t1,?t2)].
+
+// NB: 
+// I am concerned about the behaviour of EC10, wondering if we need \naf
+// or \neg with regard to the value at t1. These definitions are written
+// in a closed world, but Flora-2 is open. Will need to test it.
+
+// Axiom EC11:
+// If a fluent is released at t1, and neither clipped or declipped between
+// t1 and t2, then it is released at t2.
+?f[releasedAt(?t2)] :-
+  ?f:Fluent,
+  ?f[releasedAt(?t1)],
+  \naf ?f[clipped(?t1,?t2)],
+  \naf ?f[declipped(?t1,?t2)],
+  ?t1 < ?t2.
+
+// Axiom EC12:
+// If a fluent is not released at t1, and not released between t1 and t2,
+// then it is not released at t2.
+\neg ?f[releasedAt(?t2)] :-
+  ?f:Fluent,
+  \naf ?f[releasedAt(?t1)],
+  ?t1 < ?t2,
+  \naf ?f[releasedBetween(?t1,?t2)].
+
+// Definition EC13:
+// A fluent is released between t1 (not inclusive) and t2 if and only if
+// it is released by some event that occurs after t1 and before t2.
+?f[releasedIn(?t1,?t2)] :-
+    ?f:Fluent,
+    ?e:Event,
+    ?e[happens(?t)],
+    ?e[releases(?f,?t)],
+    ?t > ?t1,
+    ?t < ?t2.
+
+// Axiom EC14:
+// If a fluent is initiated by an event at t, and neither stopped nor
+// released between t1 non-inclusive and t2, then it is true at t2.
+?f[holdsAt(?t2)] :-
+  ?f:Fluent,
+  ?e:Event,
+  ?e[happens(?t1)],
+  ?e[initiates(?f,?t1)],
+  ?t1 < ?t2, // TODO: this is causing an instantiation error.
+  \naf ?f[stoppedIn(?t1,?t2)],
+  \naf ?f[releasedIn(?t1,?t2)].
+
+// Axiom EC15:
+// If a fluent is terminated at t1, not started or released between t1
+// (non-inclusive) and t2, it is false at t2.
+\neg ?f[holdsAt(?t2)] :-
+  ?f:Fluent,
+  ?e:Event,
+  ?e[happens(?t1)],
+  ?e[termiates(?f,?t1)],
+  ?t1 < ?t2,
+  \naf ?f[startedIn(?t1,?t2)],
+  \naf ?f[releasedIn(?t1,?t2)].
+
+// Axiom EC16:
+// If a fluents is released at t1, neither stopped nor started between
+// t1 and t2, then it is released at t2.
+?f[releasedAt(?t2)] :-
+  ?f:Fluent,
+  ?e:Event,
+  ?e[releases(?f,?t1)],
+  ?e[happens(?t1)],
+  ?t1 < ?t2,
+  \naf ?f[startedIn(?t1,?t2)],
+  \naf ?f[stoppedIn(?t1,?t2)].
+
+// Axiom EC17:
+// If a fluent is initiated or terminated by an event at t1, and the
+// fluent is not released between t1 (not inclusive) and later t2, 
+// then the fluent is not released at t2.
+\neg ?f[releasedAt(?t2)] :-
+  ?f:Fluent,
+  ?e:Event,
+  (
+      ?e[initiates(?f,?t1)];
+      ?e[terminates(?f,?t1)]
+  ),
+  ?t1 < ?t2,
+  \naf ?f[releasedIn(?t1,?t2)].
+
+// TODO: Unique Names Axioms
+// Need to be able to specify that fluents and event names are
+// known to be distinct from one another, when they are.
+
+// TODO: Circumscription
+// Circumscription is a technique to derive from the a happens,
+// initiates, and terminates predicate that they have no other effects.
+// Initiates(SwitchOn,LightOn,t) has a circumscription of
+// (e = SwitchOn ^ f = LightOn) <==> Initiates(e,f,t)
+// Circumscription is used to allow for non-monotonic reasoning.
+// It might be worth considering whether using Flora-2's defeasibility
+// features is another way of achieving the same thing. Perhaps the inertia
+// rules could be specified as defaults, and changes to inertia specified
+// as exceptions?
+
+// TODO: Uncertain timepoints
+// The axioms above compare timepoints as numbers, using less than, equal to
+// and greater than. The same operations can be obtained using Uncertain
+// timepoints from the timepoints library, so these axioms could be rewritten
+// to use the interval relations between timepoints instead. If concrete times
+// are known, they would be used to derive those relationships. If not, the
+// relationship may be possible to derive from other facts.
+// This would require a new method on the timepoint object that lets you test
+// whether the SIR between it and another timepoint is certainly lt,gt,lte,gte,
+// eq, or neq.
+
+// TODO: Inconsistency
+// Evaluate a domain description for whether it is inconsistent.
+
+// Sleep Example
+WakeUp(?_a):Event.
+WakeUp(?_a)[initiates(Awake(?_a),?_t)].
+FallAsleep(?_a):Event.
+FallAsleep(?_a)[terminates(Awake(?_a),?_t)].
+Awake(Nathan):Fluent.
+\neg Awake(Nathan)[holdsAt(0)].
+\neg Awake(Nathan)[releasedAt(0)].
+WakeUp(Nathan)[happens(1)].
+
+// TODO: Negation
+// Think about whether it makes sense to reformulate it for non-classical negation
+
+// This will load the test file and run all the tests in it.
+?- [+event_tests].

@@ -1,0 +1,60 @@
+// tests.flr
+// A Flora-2 Module for Test-Driven Development
+// By Jason Morris on behalf of Singapore Management University Centre for Computational Law
+// For research and teaching purposes only.
+// Usage:
+// 1. Create one or more test files, and import this code using -? [+tests].
+// 2. Create tests in the following format:
+//
+// name:TEST[
+//   assert->${reified query},
+//   desc->'Description'
+// ].
+//
+//    'name' should be descriptive, because it will be used in detailed reports.
+//
+// 3. Add the '?- showteststats' to the end of your test file.
+// 4. Import your tests into your Flora-2 project.
+//
+// Whenever you load your Flora-2 project the tests will be run and the statistics will be displayed.
+// Note that they will be displayed above the responses for compiling the files, so you may need to
+// scroll up to see them.
+
+?x[result->fail] :-
+  ?x:TEST[assert->?y],
+  false{?y}.
+
+?x[result->succ] :-
+  ?x:TEST[assert->?y],
+  true{?y}.
+
+?x[result->undef] :-
+  ?x:TEST[assert->?y],
+  undefined{?y}.
+
+showtests :-
+  ?x:TEST[desc->?d,result->?r],
+  write(?x)@\io,
+  \if ?r = succ \then (writeln(' succeeds.')@\io),
+  \if ?r = fail \then (write(' fails: ')@\io, writeln(?d)@\io),
+  \if ?r = undef \then (write(' undefined: ')@\io, writeln(?d)@\io).
+
+showtest(?x) :-
+  ?x:TEST[desc->?d,result->?r],
+  write(?x)@\io,
+  \if ?r = succ \then (writeln(' succeeds.')@\io),
+  \if ?r = fail \then (write(' fails: ')@\io, writeln(?d)@\io),
+  \if ?r = undef \then (write(' undefined: ')@\io, writeln(?d)@\io).
+
+showteststats :-
+  ?count = count{?test|?test:TEST},
+  ?successes = count{?test|?test:TEST[result->succ]},
+  ?failures = count{?test|?test:TEST[result->fail]},
+  ?undefineds = count{?test|?test:TEST[result->undef]},
+  ?percentage \is ?successes / ?count * 100,
+  write(?count)@\io, writeln(' tests run.')@\io,
+  write(?successes)@\io, write(' successes, ')@\io,
+  write(?failures)@\io, write(' failures, ')@\io,
+  write(?undefineds)@\io, writeln(' undefined. ')@\io,
+  write(?percentage)@\io, writeln('% success.')@\io,
+  writeln('Execute \'showtests.\', or \'showtest(test_name)\' for details.')@\io.

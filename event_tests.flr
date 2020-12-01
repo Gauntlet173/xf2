@@ -1,0 +1,49 @@
+//event_tests.flr
+
+?- [+tests].
+
+// EC1 Test.
+ec1f:Fluent.
+ec1e:Event.
+ec1e[terminates(ec1f,3)].
+ec1e[happens(3)].
+ec1t1:TEST[
+    desc->'EC1 Test 1:clipped',
+    assert->${\naf ec1f[clipped(1,2)]}
+].
+ec1t2:TEST[
+    desc->'EC1 Test 2:clipped',
+    assert->${\naf ec1f[clipped(5,6)]}
+].
+ec1t3:TEST[
+    desc->'EC1 Test 3:clipped',
+    assert->${ec1f[clipped(2,4)]}
+].
+ec1t4:TEST[
+    desc->'EC1 Test 4:clipped',
+    assert->${ec1f[clipped(3,5)]}
+].
+
+// EC2 Test Data.
+ec2f:Fluent.
+ec2e:Event.
+ec2e[initiates(ec2f,3)].
+ec2e[happens(3)].
+ec2t1:TEST[
+    desc->'EC2 Test 1:declipped',
+    assert->${\naf ec2f[declipped(1,2)]}
+].
+ec2t2:TEST[
+    desc->'EC2 Test2:declipped',
+    assert->${\naf ecf2[declipped(5,6)]}
+].
+ec2t3:TEST[
+    desc->'EC2 Test3:declipped',
+    assert->${ec2f[declipped(2,4)]}
+].
+ec2t4:TEST[
+    desc->'EC2 Test4:declipped',
+    assert->${ec2f[declipped(3,5)]}
+].
+
+?- showteststats.
