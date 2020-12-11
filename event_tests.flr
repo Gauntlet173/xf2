@@ -46,4 +46,91 @@ ec2t4:TEST[
     assert->${ec2f[declipped(3,5)]}
 ].
 
+// EC3 tests
+ec3f:Fluent.
+ec3e:Event.
+ec3e[terminates(ec3f,3)].
+ec3e[happens(3)].
+
+ec3t1:TEST[
+    desc->'EC3 Test1:stoppedIn',
+    assert->${ec3f[stoppedIn(2,4)]}
+].
+ec3t2:TEST[
+    desc->'EC3 Test2:stoppedIn',
+    assert->${\naf ec3f[stoppedIn(3,5)]}
+].
+ec3t3:TEST[
+    desc->'EC3 Test3:stoppedIn',
+    assert->${\naf ec3f[stoppedIn(1,3)]}
+].
+ec3t4:TEST[
+    desc->'EC3 Test4:stoppedIn',
+    assert->${\naf ec3f[stoppedIn(4,5)]}
+].
+
+// EC4 tests
+ec4f:Fluent.
+ec4e:Event.
+ec4e[initiates(ec4f,3)].
+ec4e[happens(3)].
+
+ec4t1:TEST[
+    desc->'EC4 Test1:startedIn',
+    assert->${ec4f[startedIn(2,4)]}
+].
+ec4t2:TEST[
+    desc->'EC4 Test2:startedIn',
+    assert->${\naf ec4f[startedIn(3,5)]}
+].
+ec4t3:TEST[
+    desc->'EC4 Test3:startedIn',
+    assert->${\naf ec4f[startedIn(1,3)]}
+].
+ec4t4:TEST[
+    desc->'EC4 Test4:startedIn',
+    assert->${\naf ec4f[startedIn(4,5)]}
+].
+
+// EC5: Trajectories
+ec5f1:Fluent[trajectory(2,ec5f2,2)].
+ec5f2:Fluent.
+ec5e:Event[happens(2),initiates(ec5f1,2)].
+ec5t1:TEST[ // TODO: This says it depends on an update.
+    status->blocked,
+    desc->'EC5: If the trajectory exists, the second fluent holds',
+    assert->${ec5f2[holdsAt(4)]}
+].
+ec5t2:TEST[ // TODO: This test breaks Flora-2.
+    status->blocked,
+    desc->'EC5: Trajectory Not Triggered Yet',
+    assert->${\naf ec5f2[holdsAt(3)]}
+].
+ec5f3:Fluent[trajectory(2,ec5f4,2)].
+ec5t3:TEST[
+    desc->'EC5: If Stopped, Trajectory does not trigger',
+    assert->${\naf ec5f4[holdsAt(4)]}
+].
+
+// EC5: Anti-Trajectories
+ec6f1:Fluent[antiTrajectory(2,ec6f2,2)].
+ec6f2:Fluent.
+ec6e:Event[happens(2),terminates(ec6f1,2)].
+ec6t1:TEST[
+    status->blocked,
+    desc->'EC6: If the anti-trajectory exists, the second fluent holds',
+    assert->${ec6f2[holdsAt(4)]}
+].
+ec6t2:TEST[ // TODO: Side effectful.
+    status->blocked,
+    desc->'EC6: Anti-trajectory Not Triggered Yet',
+    assert->${\naf ec6f2[holdsAt(3)]}
+].
+ec6f3:Fluent[antiTrajectory(2,ec6f4,2)].
+ec6t3:TEST[  // TODO: Requires update.
+    status->blocked,
+    desc->'EC5: If not Stopped, anti-trajectory does not trigger',
+    assert->${\naf ec6f4[holdsAt(4)]}
+].
+
 ?- showteststats.

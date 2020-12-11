@@ -19,17 +19,64 @@
 // Whenever you load your Flora-2 project the tests will be run and the statistics will be displayed.
 // Note that they will be displayed above the responses for compiling the files, so you may need to
 // scroll up to see them.
+// That can be made less difficult by importing your testfiles like this:
+// ?- feedback{off}, chatter{off}.
+// ?- [+testfile].
+// ?- feedback{on}, chatter{on}.
+// But that will obscure the "No" response if your testfile or the library does
+// not compile and load properly.
+
+// To Do: Report the number of solutions received, and test for it.
+// To Do: Record the actual answers expected, and test for them.
+// To Do: Record the answer status expected, and test for it.
+// To Do: Create Test Units
+// To Do: Make Units Possible to Block (do not run, do not report), or Broken (fail without running)
+// To Do: Have the output displayed per testunit.
+// To Do: Utility to quickly generate tests based on the most recent query and result.
+// To Do: Coverage analysis.
+
+{run,broken,blocked}:TESTUNITStatus.
+
+TESTUNIT[|
+    desc->\string,
+    fact->\symbol,
+    test->TEST,
+    status->TESTUNITStatus
+|].
+
+{fail,succ}:TESTResult.
+
+{run,blocked,broken}:TESTStatus.
+TEST[|
+    status=>TESTStatus,
+    fact=>\symbol,
+    assert {1..1}=>\symbol,
+    expected_answer_count {1..1}=>\long,
+    actual_answer_count {1..1}=>\long,
+    expected_answer_type {1..1}=>OUTPUT, // not sure what the type is called that includes \false and errors.
+    actual_answer_type {1..1}=>SAME,
+    expected_answers=>SOMETHING, // not sure how to structure this to be able to compare with actual results.
+    desc {1..1}=>\string,
+    result {1..1}=>TESTResult,
+    result_count {1..1}=>\long
+|].
+
+// The predicate for testing needs to insert the facts, run the query, get the result and
+// the count, delete the facts, and save the result and count to the test object.
 
 ?x[result->fail] :-
   ?x:TEST[assert->?y],
+  \naf ?x[status->blocked],
   false{?y}.
 
 ?x[result->succ] :-
   ?x:TEST[assert->?y],
+  \naf ?x[status->blocked],
   true{?y}.
 
 ?x[result->undef] :-
   ?x:TEST[assert->?y],
+  \naf ?x[status->blocked],
   undefined{?y}.
 
 showtests :-
@@ -48,11 +95,14 @@ showtest(?x) :-
 
 showteststats :-
   ?count = count{?test|?test:TEST},
+  ?blocked = count{?test|?test:TEST[status->blocked]},
+  ?run \is ?count - ?blocked,
   ?successes = count{?test|?test:TEST[result->succ]},
   ?failures = count{?test|?test:TEST[result->fail]},
   ?undefineds = count{?test|?test:TEST[result->undef]},
   ?percentage \is ?successes / ?count * 100,
-  write(?count)@\io, writeln(' tests run.')@\io,
+  write(?count)@\io, write(' tests, ')@\io,
+  write(?run)@\io, writeln(' run.')@\io,
   write(?successes)@\io, write(' successes, ')@\io,
   write(?failures)@\io, write(' failures, ')@\io,
   write(?undefineds)@\io, writeln(' undefined. ')@\io,

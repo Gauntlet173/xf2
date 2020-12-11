@@ -89,7 +89,8 @@ intersect(?x,?y) :-
   ?y:TimePointRelationSet,
   ?meth:TimePointRelation,
   ?x[?meth],
-  ?y[?meth].
+  ?y[?meth],
+  !.  // Green cut for efficiency. Don't check for non-intersecting if we know they intersect.
 
 // If two tpr sets do not intersect, their intersection is the empty set.
 ?x[intersection(?y)->tpr([])] :-
@@ -168,10 +169,10 @@ IntervalRelation[|
 // It is modified to require that timepoints be in the same network.
 ?x[reachable(?a,?b)->?n2] :-
   ?x:TimePointNet,
-  ?x[point->?a],
-  ?x[point->?b],
   ?a:TimePoint,
   ?b:TimePoint,
+  ?x[point->?a],
+  ?x[point->?b],
   ?x[reachable(?a,?b,[])->?_n],
   ?_n[reverse->?n2]@\basetype.
 
@@ -179,10 +180,10 @@ IntervalRelation[|
 // It is modified to require that the timepoints and Intervals be in the same network.
 ?x[reachable(?a,?b,?_p)->[?l|?_p]] :-
   ?x:TimePointNet,
-  ?x[point->?a],
-  ?x[point->?b],
   ?a:TimePoint,
   ?b:TimePoint,
+  ?x[point->?a],
+  ?x[point->?b],
   ?x[interval->?l],
   ?l:IntervalRelation[
       from->?a,
@@ -192,10 +193,10 @@ IntervalRelation[|
 // A timepoint is also reachable from another if is connected in reverse.
 ?x[reachable(?a,?b,?_p)->[reverse(?l)|?_p]] :-
   ?x:TimePointNet,
-  ?x[point->?a],
-  ?x[point->?b],
   ?a:TimePoint,
   ?b:TimePoint,
+  ?x[point->?a],
+  ?x[point->?b],
   ?x[interval->?l],
   ?l:IntervalRelation[
       from->?b,
@@ -206,10 +207,12 @@ IntervalRelation[|
 // timepoint with an IntervalRelation not already in the path.
 ?x[reachable(?a,?b,?p)->?n] :-
   ?x:TimePointNet,
+  ?a:TimePoint,
+  ?b:TimePoint,
+  ?c:TimePoint,
   ?x[point->?a],
   ?x[point->?b],
-  ?a:TimePoint,
-  ?c:TimePoint,
+  ?x[point->?c],
   ?x[interval->?l],
   ?l:IntervalRelation[
       from->?a,
@@ -224,10 +227,12 @@ IntervalRelation[|
 // Similarly if the link is in the opposite direction.
 ?x[reachable(?a,?b,?p)->?n] :-
   ?x:TimePointNet,
+  ?a:TimePoint,
+  ?b:TimePoint,
+  ?c:TimePoint,
   ?x[point->?a],
   ?x[point->?b],
-  ?a:TimePoint,
-  ?c:TimePoint,
+  ?x[point->?c],
   ?x[interval->?l],
   ?l:IntervalRelation[
       from->?c,
@@ -311,7 +316,7 @@ tpr([equal]):ConcreteTimePointRelation.
 tpr([after]):ConcreteTimePointRelation.
 
 
-// This is the list of edges that a completion will need to add to the existing network.
+// This is the list of edges that need to be derived and added to completions.
 ?x[edge->edge(?a,?b)] :-
   ?x:TimePointNet,
   ?edges = setof{?ordered_pair|
@@ -328,33 +333,69 @@ tpr([after]):ConcreteTimePointRelation.
 
 // This predicate just returns every permutation of ConcreteTimePointRelations
 // for a list with the length of ?list.
-option(?list,?output) :-
-  ?list = [?_h|[]],
-  ?_rel:ConcreteTimePointRelation,
-  ?output = [?_rel].
+//option(?list,?output) :-
+//  ?list = [?_h|[]],
+//  ?_rel:ConcreteTimePointRelation,
+//  ?_rel = tpr([?ctpr]),
+//  ?_h = edge(?A,?B),
+//  ?_edgerel = tpr(?opt),
+//  ?ctpr \in ?opt,
+//  ?output = [?_rel].
 
-option(?list,?output) :-
-  ?list = [?_h|?t],
-  option(?t,?result),
-  ?_rel:ConcreteTimePointRelation,
-  ?output = [?_rel|?result].
+//option(?list,?output) :-
+//  ?list = [?_h|?t],
+//  option(?t,?result),
+//  ?_rel:ConcreteTimePointRelation,
+//  ?output = [?_rel|?result].
+
+?net[options(?edges)->?output] :-
+  ?edges = [?_h|[]],
+  ?net[derived_interval->?_h[relationship->?_r]],
+  ?cr:TimePointRelation,
+  //?_r = tpr(?_l), // this doesn't work for derived relationships other than unknown.
+  ?_l = bagof{?meth|?meth:TimePointRelation,?_r[?meth]},
+  ?cr \in ?_l,
+  ?output = [tpr(?cr)].
+
+?net[options(?edges)->?output] :-
+  ?edges = [?_h|?t],
+  ?net[options(?t)->?result],
+  ?net[derived_interval->?_h[relationship->?_r]],
+  ?cr:TimePointRelation,
+  //?_r = tpr(?_l),
+  ?_l = bagof{?meth|?meth:TimePointRelation,?_r[?meth]},
+  ?cr \in ?_l,
+  ?output = [tpr(?cr)|?result].
 
 // A TimePointNet has a completion for each possible permutation of concrete relations
 // over all of its edges, which is a TimePointNet.
-?x[completion->completion(?x,?edges,?relations):TimePointNet] :-
+//?x[completion->completion(?x,?edges,?relations):TimePointNet] :-
+//  ?x:TimePointNet,
+//  ?x != completion(?_,?_,?_), // to avoid infinite loops.
+//  ?edges = setof{?edge|?x[edge->?edge]},
+//  option(?edges,?relations).
+
+?x[completion->completion(?x,?d,?relations):TimePointNet] :-
   ?x:TimePointNet,
   ?x != completion(?_,?_,?_), // to avoid infinite loops.
-  ?edges = setof{?edge|?x[edge->?edge]},
-  option(?edges,?relations).
+  ?d = bagof{?di|?x[derived_interval->?di]},
+  ?x[options(?d)->?relations].
+
+// TODO The option predicate above needs to be re-written so that there are only
+// completions for each of the concrete relations possible in each of the derived
+// intervals. If there are two derived edges, AB(be) and BC(ea), it should return
+// before,equal; before,after; equal,equal; equal,after.
 
 // This creates the intervals in the network completions.
-completion(?x,?edges,?relations)[interval->interval(?x,?y,?edge,?rel):IntervalRelation[from->?a,to->?b,relationship->?rel]] :-
+completion(?x,?dilist,?relations)[interval->interval(?x,?y,?edge,?rel):IntervalRelation[from->?a,to->?b,relationship->?rel]] :-
   ?x:TimePointNet,
   ?x[completion->?y],
-  ?y = completion(?x,?edges,?relations),
-  ?edges[ith(?index)->?edge]@\basetype,
+  ?y = completion(?x,?dilist,?relations),
+  ?dilist[ith(?index)->?di]@\basetype,
   ?relations[ith(?index)->?rel]@\basetype,
-  ?edge = edge(?a,?b).
+  ?di = derived_interval(?x,?a,?b).
+
+// This is not working.
 
 // Every point in a TimePointNet is also a point in a completion of that TimePointNet.
 // This is required to be able to use the methods available in TimePointNet inside
@@ -364,6 +405,20 @@ completion(?z,?_,?_)[point->?y] :-
   ?z[completion->?x],
   ?x = completion(?z,?_,?_),
   ?z[point->?y].
+
+// If two nodes have a strongest implied relationship, there is a derived interval with that relationship.
+?x[derived_interval->derived_interval(?x,?a,?b):IntervalRelation[from->?a,to->?b,relationship->?rel]] :-
+  ?x:TimePointNet,
+  ?x != completion(?_,?_,?_),
+  ?x[edge->edge(?a,?b)],
+  ?x[sir(?a,?b)->?rel].
+
+// If two nodes in a network are not reachable, they have a derived relationship of unknown.
+?x[derived_interval->derived_interval(?x,?a,?b):IntervalRelation[from->?a,to->?b,relationship->tpr([before,equal,after])]] :-
+  ?x:TimePointNet,
+  ?x != completion(?_,?_,?_),
+  ?x[edge->edge(?a,?b)],
+  \naf ?x[reachable(?a,?b)->?_].
 
 // Every interval in a timepointnet is also an interval in every completion of the timepointnet.
 ?x[interval->?y] :-
@@ -384,43 +439,43 @@ TimePoint[|
 |].
 
 // A timepoint is at the same time as another timepoint it is equal to which has a set time.
-?y[at->?z_at] :-
-  ?x:TimePointNet,
-  ?x[point->?y:TimePoint],
-  ?x[interval->?i[from->?y,to->?z[at->?z_at],relationship->tpr([equal])]].
+//?y[at->?z_at] :-
+//  ?x:TimePointNet,
+//  ?x[point->?y:TimePoint],
+//  ?x[interval->?i[from->?y,to->?z[at->?z_at],relationship->tpr([equal])]].
 
-?x[interval->interval_concrete(?a,?b,before):IntervalRelation[from->?a,to->?b,relationship->tpr([before])]] :-
-  ?x:TimePointNet,
-  ?x[point->?a],
-  ?x[point->?b],
-  ?a!=?b,
-  ?a:TimePoint[at->?a_at],
-  ?b:TimePoint[at->?b_at],
-  ?a_at[lessThan(?b_at)]@\basetype.
+//?x[interval->interval_concrete(?a,?b,before):IntervalRelation[from->?a,to->?b,relationship->tpr([before])]] :-
+//  ?x:TimePointNet,
+//  ?x[point->?a],
+//  ?x[point->?b],
+//  ?a!=?b,
+//  ?a:TimePoint[at->?a_at],
+//  ?b:TimePoint[at->?b_at],
+//  ?a_at[lessThan(?b_at)]@\basetype.
 
-?x[interval->interval_concrete(?h,?t,equal):IntervalRelation[from->?a,to->?b,relationship->tpr([equal])]] :-
-  ?x:TimePointNet,
-  ?x[point->?a],
-  ?x[point->?b],
-  ?a!=?b,
-  ?a:TimePoint[at->?a_at],
-  ?b:TimePoint[at->?b_at],
-  ?a_at[equals(?b_at)]@\basetype,
-  ?list = setof{?z|?z \in [?a,?b]}, // These lines prevent redundant equals relationships
-  ?list = [?h|[?t|[]]].
+//?x[interval->interval_concrete(?h,?t,equal):IntervalRelation[from->?a,to->?b,relationship->tpr([equal])]] :-
+//  ?x:TimePointNet,
+//  ?x[point->?a],
+//  ?x[point->?b],
+//  ?a!=?b,
+//  ?a:TimePoint[at->?a_at],
+//  ?b:TimePoint[at->?b_at],
+//  ?a_at[equals(?b_at)]@\basetype,
+//  ?list = setof{?z|?z \in [?a,?b]}, // These lines prevent redundant equals relationships
+//  ?list = [?h|[?t|[]]].
 
 // Strongest Implied Before
 // This should return the concrete datetime which this TimePoint is before, and is the lowest.
-?x[sib(?y)->?min] :-
-  ?x:TimePointNet,
-  ?x[point->?y],
-  ?x[point->?z],
-  ?y!=?z,
-  ?x[sir(?y,?z)->?rel], // This line is generating errors for exceeding maximum table size.
-  ?rel[before],
-  \naf ?rel[equal],
-  \naf ?rel[after],
-  ?min = min{?z_at|?z[at->?z_at]}.
+//?x[sib(?y)->?min] :-
+//  ?x:TimePointNet,
+//  ?x[point->?y],
+//  ?x[point->?z],
+//  ?y!=?z,
+//  ?x[sir(?y,?z)->?rel], // This line is generating errors for exceeding maximum table size.
+//  ?rel[before],
+//  \naf ?rel[equal],
+//  \naf ?rel[after],
+//  ?min = min{?z_at|?z[at->?z_at]}.
 
 // Tests
 
@@ -576,3 +631,47 @@ datenet:TimePointNet[point->{dob,dod,dob2,test,middle},interval->{testtodod,mtod
 
 // Later, it should be possible to use durations and add or subtract them from timePoints,
 // so we can say things like "three days before the signing". 
+
+{E,F}:TimePoint.
+EtoF:IntervalRelation[from->E,to->F,relationship->tpr([before])].
+AllenComposition:TimePointNet[
+  point->{A,B,C,D,E,F},
+  interval->{AtoB,CtoD,EtoF}
+].
+
+// If I was to generate every possible completion of an Allen Composition, and then to test for validity,
+// I think I would get back the 69 cells in the Allen Composition table. But to test that, we can create
+// one known composition, and see if it gives the expected results.
+
+// If interval A precedes interval B, and interval B is during interval C,
+// then the relationship between interval A and interval C is one of
+// preceding, meeting, overlapping, starting, or during.
+
+{AtoC,BtoC,AtoD,BtoD,CtoE,CtoF,DtoE,DtoF}:IntervalRelation.
+// These for relations set out that AB precedes CD.
+AtoC[from->A,to->C,relationship->tpr([before])].
+AtoD[from->A,to->D,relationship->tpr([before])].
+BtoC[from->B,to->C,relationship->tpr([before])].
+BtoD[from->B,to->D,relationship->tpr([before])].
+// These four relations set out that CD is during EF.
+CtoE[from->C,to->E,relationship->tpr([after])].
+CtoF[from->C,to->F,relationship->tpr([before])].
+DtoE[from->D,to->E,relationship->tpr([after])].
+DtoF[from->D,to->F,relationship->tpr([before])].
+
+// We add those relationship to the AllenComposition network.
+AllenComposition[interval->{AtoC,AtoD,BtoC,BtoD,CtoE,CtoF,DtoE,DtoF}].
+
+// Now A and B should both be before F, but have no known relationship to E.
+// ?- AllenComposition[sir(A,E)->?_x[%display]].
+//    (bea)
+//    Yes
+// ?- AllenComposition[sir(A,F)->?_x[%display]].
+//    (b)
+//    Yes
+// ?- AllenComposition[sir(B,E)->?_x[%display]].
+//    (bea)
+//    Yes
+// ?- AllenComposition[sir(B,F)->?_x[%display]].
+//    (b)
+//    Yes

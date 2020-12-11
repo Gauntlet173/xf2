@@ -270,5 +270,7 @@ WakeUp(Nathan)[happens(1)].
 // TODO: Negation
 // Think about whether it makes sense to reformulate it for non-classical negation
 
-// This will load the test file and run all the tests in it.
+// This will quietly load the test file and run all the tests in it.
+?- feedback{off}, chatter{off}.
 ?- [+event_tests].
+?- feedback{on}, chatter{on}.
