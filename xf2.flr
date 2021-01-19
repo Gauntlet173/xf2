@@ -26,6 +26,8 @@ xf2Explanation[|
   ?x:xf2Explanation,
   ?x[display(0)].
 
+
+// This should be modified to take advantage of \object[show(goal)->?x]@\show.
 remove_reification(?original,?new) :-
   substitute('\$\{',?original,'',?_temp)@\prolog(pcre),
   substitute('\}',?_temp,'',?_temp2)@\prolog(pcre),

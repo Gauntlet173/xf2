@@ -1,0 +1,13 @@
+language:
+  man/1: "%s is a man."
+  mortal/1: "%s is mortal."
+  
+argument_schemes:
+  - id: mortal_if_human
+    variables: [X]
+    premises:
+      - human(X)
+    conclusions:
+      - mortal(X)
+assumptions:
+  - man(socrates)

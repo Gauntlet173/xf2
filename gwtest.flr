@@ -1,0 +1,6 @@
+holds(?P) :- asserts(?E,?P),expert(?E).
+expert(?E) :- holds(expert(?E)).
+asserts(?E,?P) :- holds(asserts(?E,?P)).
+caused_by(?X,?M) :- holds(caused_by(?X,?M)).
+
+?- caused_by(global_warming,humans).

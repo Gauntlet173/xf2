@@ -1,0 +1,86 @@
+error(2)[goal->null].
+error(3)[goal->null].
+call(4)[goal->${Wednesday[sibling->Pugsley]@main}, stage->new, parent->null].
+call(5)[goal->${Wednesday:Person@main}, stage->new, parent->${Wednesday[sibling->Pugsley]@main}].
+answer(6)[goal->${Wednesday:Person@main}, answer_list->[?_h8251]].
+call(7)[goal->${?_h8253::Person@main}, stage->new, parent->${Wednesday:Person@main}].
+call(8)[goal->${?_h8253::?_h8254@main}, stage->new, parent->${?_h8253::Person@main}].
+answer(9)[goal->${?_h8260::?_h8261@main}, answer_list->[\float, \double, ?_h8255, ?_h8257]].
+answer(10)[goal->${?_h8260::?_h8261@main}, answer_list->[\integer, \decimal, ?_h8255, ?_h8257]].
+answer(11)[goal->${?_h8260::?_h8261@main}, answer_list->[\long, \decimal, ?_h8255, ?_h8257]].
+answer(12)[goal->${?_h8260::?_h8261@main}, answer_list->[\long, \integer, ?_h8255, ?_h8257]].
+answer(13)[goal->${?_h8260::?_h8261@main}, answer_list->[?_h8251, \object, ?_h8255, ?_h8257]].
+call(14)[goal->${?_h8253::?_h8254@main}, stage->incmp, parent->${?_h8253::?_h8254@main}].
+answer_to_consumer(15)[goal->${?_h8261::?_h8262@main}, answer_list->[\float, \double, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer(16)[goal->${?_h8260::?_h8261@main}, answer_list->[\float, \object, ?_h8255, ?_h8257]].
+answer_to_consumer(17)[goal->${?_h8261::?_h8262@main}, answer_list->[\integer, \decimal, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer(18)[goal->${?_h8260::?_h8261@main}, answer_list->[\integer, \object, ?_h8255, ?_h8257]].
+answer_to_consumer(19)[goal->${?_h8261::?_h8262@main}, answer_list->[\long, \decimal, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer(20)[goal->${?_h8260::?_h8261@main}, answer_list->[\long, \object, ?_h8255, ?_h8257]].
+answer_to_consumer(21)[goal->${?_h8261::?_h8262@main}, answer_list->[\long, \integer, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer_to_consumer(22)[goal->${?_h8261::?_h8262@main}, answer_list->[?_h8252, \object, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer_to_consumer(23)[goal->${?_h8261::?_h8262@main}, answer_list->[\float, \object, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer_to_consumer(24)[goal->${?_h8261::?_h8262@main}, answer_list->[\integer, \object, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+answer_to_consumer(25)[goal->${?_h8261::?_h8262@main}, answer_list->[\long, \object, ?_h8256, ?_h8258], consumer->${?_h8261::?_h8262@main}].
+completed(26)[goal->${?_h8252::?_h8253@main}, sccnum->7].
+completed(27)[goal->${?_h8252::Person@main}, sccnum->4].
+completed(28)[goal->${Wednesday:Person@main}, sccnum->3].
+call(29)[goal->${Pugsley:Person@main}, stage->new, parent->${Wednesday[sibling->Pugsley]@main}].
+answer(30)[goal->${Pugsley:Person@main}, answer_list->[?_h8251]].
+call(31)[goal->${?_h8253::Person@main}, stage->cmp, parent->${Pugsley:Person@main}].
+completed(32)[goal->${Pugsley:Person@main}, sccnum->16].
+call(33)[goal->neg_implies_naf_check(${(\naf ((?_h8269[child->Wednesday]@main, ?_h8269:Person@main), (\naf ?_h8269[child->Pugsley]@main)))},[Wednesday, Pugsley, Pugsley, Pugsley],26,'family.flr')@\prolog, stage->new, parent->${Wednesday[sibling->Pugsley]@main}].
+completed(34)[goal->neg_implies_naf_check(${(\naf ((?_h8268[child->Wednesday]@main, ?_h8268:Person@main), (\naf ?_h8268[child->Pugsley]@main)))},[Wednesday, Pugsley, Pugsley, Pugsley],26,'family.flr')@\prolog, sccnum->17].
+negative_call(35)[goal->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}, stage->new, parent->${Wednesday[sibling->Pugsley]@main}].
+call(36)[goal->${?_h8253[child->Wednesday]@main}, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+answer(37)[goal->${?_h8256[child->Wednesday]@main}, answer_list->[Gomez, ?_h8253]].
+answer(38)[goal->${?_h8256[child->Wednesday]@main}, answer_list->[Morticia, ?_h8253]].
+completed(39)[goal->${?_h8252[child->Wednesday]@main}, sccnum->19].
+call(40)[goal->${Morticia:Person@main}, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+answer(41)[goal->${Morticia:Person@main}, answer_list->[?_h8251]].
+call(42)[goal->${?_h8253::Person@main}, stage->cmp, parent->${Morticia:Person@main}].
+completed(43)[goal->${Morticia:Person@main}, sccnum->20].
+call(44)[goal->neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+call(45)[goal->${\neg Morticia[child->Pugsley]@main}, stage->new, parent->neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog].
+call(46)[goal->${\neg Morticia.child[]@main}, stage->new, parent->${\neg Morticia[child->Pugsley]@main}].
+completed(47)[goal->${\neg Morticia.child[]@main}, sccnum->24].
+completed(48)[goal->${\neg Morticia[child->Pugsley]@main}, sccnum->23].
+completed(49)[goal->neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog, sccnum->21].
+negative_call(50)[goal->${(\naf Morticia[child->Pugsley]@main)}, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+call(51)[goal->${Morticia[child->Pugsley]@main}, stage->new, parent->${(\naf Morticia[child->Pugsley]@main)}].
+answer(52)[goal->${Morticia[child->Pugsley]@main}, answer_list->[?_h8251]].
+completed(53)[goal->${Morticia[child->Pugsley]@main}, sccnum->26].
+answer(54)[goal->${(\naf Morticia[child->Pugsley]@main)}, answer_list->[]].
+completed(55)[goal->${(\naf Morticia[child->Pugsley]@main)}, sccnum->ec].
+completed(56)[goal->${(\naf Morticia[child->Pugsley]@main)}, sccnum->25].
+negative_call(57)[goal->my_tunnumcall(neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog)@\prolog, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+call(58)[goal->neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog, stage->cmp, parent->my_tunnumcall(neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog)@\prolog].
+completed(59)[goal->my_tunnumcall(neg_implies_naf_check(${(\naf Morticia[child->Pugsley]@main)},[Morticia, Pugsley],26,'family.flr')@\prolog)@\prolog, sccnum->27].
+call(60)[goal->${Gomez:Person@main}, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+answer(61)[goal->${Gomez:Person@main}, answer_list->[?_h8251]].
+call(62)[goal->${?_h8253::Person@main}, stage->cmp, parent->${Gomez:Person@main}].
+completed(63)[goal->${Gomez:Person@main}, sccnum->28].
+call(64)[goal->neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+call(65)[goal->${\neg Gomez[child->Pugsley]@main}, stage->new, parent->neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog].
+call(66)[goal->${\neg Gomez.child[]@main}, stage->new, parent->${\neg Gomez[child->Pugsley]@main}].
+completed(67)[goal->${\neg Gomez.child[]@main}, sccnum->31].
+completed(68)[goal->${\neg Gomez[child->Pugsley]@main}, sccnum->30].
+completed(69)[goal->neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog, sccnum->29].
+negative_call(70)[goal->${(\naf Gomez[child->Pugsley]@main)}, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+call(71)[goal->${Gomez[child->Pugsley]@main}, stage->new, parent->${(\naf Gomez[child->Pugsley]@main)}].
+answer(72)[goal->${Gomez[child->Pugsley]@main}, answer_list->[?_h8251]].
+completed(73)[goal->${Gomez[child->Pugsley]@main}, sccnum->33].
+answer(74)[goal->${(\naf Gomez[child->Pugsley]@main)}, answer_list->[]].
+completed(75)[goal->${(\naf Gomez[child->Pugsley]@main)}, sccnum->ec].
+completed(76)[goal->${(\naf Gomez[child->Pugsley]@main)}, sccnum->32].
+negative_call(77)[goal->my_tunnumcall(neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog)@\prolog, stage->new, parent->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}].
+call(78)[goal->neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog, stage->cmp, parent->my_tunnumcall(neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog)@\prolog].
+completed(79)[goal->my_tunnumcall(neg_implies_naf_check(${(\naf Gomez[child->Pugsley]@main)},[Gomez, Pugsley],26,'family.flr')@\prolog)@\prolog, sccnum->34].
+completed(80)[goal->${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))}, sccnum->18].
+answer(81)[goal->${Wednesday[sibling->Pugsley]@main}, answer_list->[Siblings_Share_Parents, ?_h8253]].
+negative_call(82)[goal->my_tunnumcall(neg_implies_naf_check(${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))},[Wednesday, Pugsley, Pugsley, Pugsley],26,'family.flr')@\prolog)@\prolog, stage->new, parent->${Wednesday[sibling->Pugsley]@main}].
+call(83)[goal->neg_implies_naf_check(${(\naf ((?_h8269[child->Wednesday]@main, ?_h8269:Person@main), (\naf ?_h8269[child->Pugsley]@main)))},[Wednesday, Pugsley, Pugsley, Pugsley],26,'family.flr')@\prolog, stage->cmp, parent->my_tunnumcall(neg_implies_naf_check(${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))},[Wednesday, Pugsley, Pugsley, Pugsley],26,'family.flr')@\prolog)@\prolog].
+completed(84)[goal->my_tunnumcall(neg_implies_naf_check(${(\naf (('$VAR'(0)@\prolog[child->Wednesday]@main, '$VAR'(0)@\prolog:Person@main), (\naf '$VAR'(0)@\prolog[child->Pugsley]@main)))},[Wednesday, Pugsley, Pugsley, Pugsley],26,'family.flr')@\prolog)@\prolog, sccnum->35].
+completed(85)[goal->${Wednesday[sibling->Pugsley]@main}, sccnum->1].
+error(86)[goal->null].
+error(87)[goal->null].

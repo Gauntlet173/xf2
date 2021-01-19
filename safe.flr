@@ -32,10 +32,6 @@ Event[|
     duration_of_event=>\duration
 |].
 
-Action[|
-
-|].
-
 Payment::Action[|
     payor=>Person,
     payee=>Person,

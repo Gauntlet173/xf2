@@ -1,0 +1,10 @@
+error(749)[goal->null].
+error(750)[goal->null].
+call(751)[goal->${mortal(Socrates)@main}, stage->new, parent->null].
+call(752)[goal->${human(Socrates)@main}, stage->new, parent->${mortal(Socrates)@main}].
+answer(753)[goal->${human(Socrates)@main}, answer_list->[?_h1390]].
+completed(754)[goal->${human(Socrates)@main}, sccnum->3].
+answer(755)[goal->${mortal(Socrates)@main}, answer_list->[Humans_Are_Mortal, ?_h1392]].
+completed(756)[goal->${mortal(Socrates)@main}, sccnum->1].
+error(757)[goal->null].
+error(758)[goal->null].

@@ -1,0 +1,80 @@
+// bec.flr
+// A reimplementation of basic event calculus in Flora-2
+// based on Arias et. al. in http://www.cliplab.org/papers/arias19-event-calculus-asp-lopstr19.pdf
+// by Jason Morris, for Singapore Management University Centre for Computational Law
+
+// BEC1 - StoppedIn(t1,f,t2)
+stoppedIn(?T1, ?Fluent, ?T2) :-
+    {?T1 < ?T, ?T < ?T2},
+    terminates(?Event, ?Fluent, ?T),
+    happens(?Event, ?T).
+
+stoppedIn(?T1, ?Fluent, ?T2) :-
+    {?T1 < ?T, ?T < ?T2},
+    releases(?Event, ?Fluent, ?T),
+    happens(?Event, ?T).
+
+// BEC2 - StartedIn(t1,f,t2)
+startedIn(?T1, ?Fluent, ?T2) :-
+    {?T1 < ?T, ?T < ?T2},
+    initiates(?Event, ?Fluent, ?T),
+    happens(?Event, ?T).
+
+startedIn(?T1, ?Fluent, ?T2) :-
+    {?T1 < ?T, ?T < ?T2},
+    releases(?Event, ?Fluent, ?T),
+    happens(?Event, ?T).
+
+// BEC3 - HoldsAt(f,t)
+holdsAt(?Fluent2, ?T2) :-
+    initiates(?Event, ?Fluent1, ?T1),
+    happens(?Event, ?T1),
+    trajectory(?Fluent1, ?T1, ?Fluent2, ?T2),
+    \naf stoppedIn(?T1, ?Fluent1, ?T2).
+
+// BEC4 - HoldsAt(f,t)
+holdsAt(?Fluent, ?T) :-
+    {0 < ?T},
+    initiallyP(?Fluent),
+    \naf stoppedIn(0, ?Fluent, ?T).
+
+// BEC5 - not HoldsAt(f,t)
+-holdsAt(?Fluent, ?T) :-
+    {0 < ?T},
+    initiallyN(?Fluent),
+    \naf startedIn(0, ?Fluent, ?T).
+
+// BEC6 - HoldsAt(f,t)
+holdsAt(?Fluent, ?T) :-
+    {?T1 < ?T},
+    initiates(?Event, ?Fluent, ?T1),
+    happens(?Event, ?T1),
+    \naf stoppedIn(?T1, ?Fluent, ?T).
+
+// BEC7 - not HoldsAt(f,t)
+-holdsAt(?Fluent, ?T) :-
+    {?T1 < ?T},
+    terminates(?Event, ?Fluent, ?T1),
+    happens(?Event, ?T1),
+    \naf startedIn(?T1, ?Fluent, ?T).
+
+// Search for changes in the value of a Fluent.
+fluent_changed(?F,?T,\true) :- holdsAt(?F,?T).
+fluent_changed(?F,?T,\false) :- -holdsAt(?F,?T).
+
+values(?F,?T,?V) :-
+    fluent_changed(?F,?T,?V).
+
+initiates(wfh_order,wfh_required,?_).
+
+terminates(presence_required,wfh_required,?_).
+
+initiallyN(wfh_required).
+
+happens(wfh_order, 1).
+
+happens(presence_required, 3).
+
+?- [+xf2].
+
+test:xf2Explanation[goal->${holdsAt(wfh_required,3)}].

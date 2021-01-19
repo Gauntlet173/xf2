@@ -1,0 +1,23 @@
+language:
+  human/1: "%s is human."
+  mortal/1: "%s is mortal."
+  immortal/1: "%s is immortal."
+  socrates/0: "Socrates"
+
+issue_schemes:
+  mortality:
+    - mortal(X)
+    - immortal(X)
+
+argument_schemes:
+  - id: mortal_if_human
+    variables: [X]
+    premises:
+      - human(X)
+    conclusions:
+      - mortal(X)
+    exceptions:
+      - immortal(X)
+
+assumptions:
+  - human(socrates)

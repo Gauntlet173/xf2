@@ -1,0 +1,15 @@
+// logforest tools
+// These are tools for analysing the output of a logforest file.
+
+rootgoal(?x) :-
+  call(?_call)[goal->?x,parent->null].
+
+children(?x,?y) :-
+  call(?_)[goal->?x],
+  call(?_)[goal->?y,parent->?x].
+
+answerlist(?goal,?list) :-
+  answer(?_)[goal->?goal,answer_list->?list].
+
+
+  

@@ -1,0 +1,13 @@
+// Animal
+
+Animal[|legs=>\long|].
+
+Dog::Animal[|legs->4|].
+Cat::Animal[|legs->4|].
+Bird::Animal[|legs->2|].
+Human::Animal[|legs->2|].
+
+same_legs(?x,?y) :-
+  ?x::Animal[|legs->?l|],
+  ?y::Animal[|legs->?l|],
+  ?x != ?y.

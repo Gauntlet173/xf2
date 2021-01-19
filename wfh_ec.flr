@@ -1,0 +1,23 @@
+/// wfh_ec.flr
+// An implementation of a simple work from home rule in basic event
+// calculus
+
+?- [+bec].
+
+// "working from home is mandatory unless the employer requires a physical presence for operational effectivness."
+ 
+// Whether a person is required to work from home is a fluent, wfh_required.
+// The events are wfh_order and presence_required
+
+initiates(wfh_order,wfh_required,?_).
+
+terminates(presence_required,wfh_required,?_).
+
+initiallyN(wfh_required).
+
+happens(wfh_order, 1).
+
+happens(presence_required, 3).
+
+//?- fluent_changed(wfh_required,?T).
+
